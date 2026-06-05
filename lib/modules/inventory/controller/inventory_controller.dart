@@ -37,6 +37,12 @@ class InventoryController extends GetxController {
   final TextEditingController newPartyPhoneController = TextEditingController();
   final TextEditingController newPartyAddressController = TextEditingController();
 
+  // Inline Product Form Controllers
+  final TextEditingController newSkuController = TextEditingController();
+  final TextEditingController newDescController = TextEditingController();
+  final TextEditingController newImgUrlController = TextEditingController();
+  final TextEditingController newSizesController = TextEditingController();
+
   final TextEditingController searchController = TextEditingController();
 
   @override
@@ -57,6 +63,10 @@ class InventoryController extends GetxController {
     newPartyNameController.dispose();
     newPartyPhoneController.dispose();
     newPartyAddressController.dispose();
+    newSkuController.dispose();
+    newDescController.dispose();
+    newImgUrlController.dispose();
+    newSizesController.dispose();
     searchController.dispose();
     super.onClose();
   }
@@ -310,5 +320,54 @@ class InventoryController extends GetxController {
   void onSearchChanged(String val) {
     searchQuery.value = val;
     fetchInventory();
+  }
+
+  Future<bool> addProduct() async {
+    final sku = newSkuController.text.trim();
+    final desc = newDescController.text.trim();
+    if (sku.isEmpty || desc.isEmpty) {
+      AppSnacks.errorSnack(message: "SKU Code and Product Name are required.");
+      return false;
+    }
+
+    try {
+      Get.dialog(
+        const Center(child: CircularProgressIndicator(color: Colors.white)),
+        barrierDismissible: false,
+      );
+
+      final Map<String, dynamic> body = {
+        "skuCode": sku,
+        "description": desc,
+        "imageUrl": newImgUrlController.text.trim(),
+        "size": newSizesController.text.trim(),
+      };
+
+      var res = await apiRepository.createProduct(body);
+      Get.back(); // Pop loading dialog
+
+      if (res != false) {
+        AppSnacks.successSnack(message: "Product '$sku' created successfully.");
+        newSkuController.clear();
+        newDescController.clear();
+        newImgUrlController.clear();
+        newSizesController.clear();
+        await fetchProducts();
+        
+        // Auto-select the newly created product
+        final createdProduct = productsList.firstWhere(
+          (p) => p["skuCode"] == sku,
+          orElse: () => null,
+        );
+        if (createdProduct != null) {
+          onProductSelected(createdProduct);
+        }
+        return true;
+      }
+    } catch (e) {
+      Get.back();
+      print("Error creating product: $e");
+    }
+    return false;
   }
 }

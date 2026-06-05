@@ -407,71 +407,83 @@ class InventoryView extends GetView<InventoryController> {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Obx(() {
-                  final currentSku = controller.selectedSkuCode.value;
-                  final isInList = controller.productsList.any((p) => p["skuCode"] == currentSku);
-                  return DropdownButtonFormField<dynamic>(
-                    dropdownColor: AppColor.primary900,
-                    isExpanded: true,
-                    value: isInList ? controller.productsList.firstWhere((p) => p["skuCode"] == currentSku) : null,
-                    hint: Text("Select Product", style: TextStyle(color: AppColor.primary600.withValues(alpha: 0.5), fontSize: 14)),
-                    style: TextStyle(color: AppColor.white, fontSize: 14),
-                    decoration: InputDecoration(
-                      fillColor: AppColor.primary800,
-                      filled: true,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      enabledBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: AppColor.primary800),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: AppColor.primary600),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Obx(() {
+                        final currentSku = controller.selectedSkuCode.value;
+                        final isInList = controller.productsList.any((p) => p["skuCode"] == currentSku);
+                        return DropdownButtonFormField<dynamic>(
+                          dropdownColor: AppColor.primary900,
+                          isExpanded: true,
+                          value: isInList ? controller.productsList.firstWhere((p) => p["skuCode"] == currentSku) : null,
+                          hint: Text("Select Product", style: TextStyle(color: AppColor.primary600.withValues(alpha: 0.5), fontSize: 14)),
+                          style: TextStyle(color: AppColor.white, fontSize: 14),
+                          decoration: InputDecoration(
+                            fillColor: AppColor.primary800,
+                            filled: true,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            enabledBorder: OutlineInputBorder(
+                              borderSide: BorderSide(color: AppColor.primary800),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderSide: BorderSide(color: AppColor.primary600),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          items: controller.productsList.map((p) {
+                            final img = p["imageUrl"] ?? "";
+                            final name = p["description"] ?? "";
+                            final sku = p["skuCode"] ?? "";
+                            return DropdownMenuItem<dynamic>(
+                              value: p,
+                              child: Row(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(4),
+                                    child: Container(
+                                      width: 28,
+                                      height: 28,
+                                      color: AppColor.primary800,
+                                      child: Image.network(
+                                        ApiUrl.getFullImageUrl(img),
+                                        width: 28,
+                                        height: 28,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (c, e, s) => Icon(Icons.image, size: 14, color: AppColor.primary600),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      "$name ($sku)",
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(color: AppColor.white, fontSize: 13),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (val) {
+                            if (val != null) {
+                              controller.onProductSelected(val);
+                            }
+                          },
+                        );
+                      }),
                     ),
-                    items: controller.productsList.map((p) {
-                      final img = p["imageUrl"] ?? "";
-                      final name = p["description"] ?? "";
-                      final sku = p["skuCode"] ?? "";
-                      return DropdownMenuItem<dynamic>(
-                        value: p,
-                        child: Row(
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(4),
-                              child: Container(
-                                width: 28,
-                                height: 28,
-                                color: AppColor.primary800,
-                                child: Image.network(
-                                  ApiUrl.getFullImageUrl(img),
-                                  width: 28,
-                                  height: 28,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (c, e, s) => Icon(Icons.image, size: 14, color: AppColor.primary600),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                "$name ($sku)",
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(color: AppColor.white, fontSize: 13),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                    onChanged: (val) {
-                      if (val != null) {
-                        controller.onProductSelected(val);
-                      }
-                    },
-                  );
-                }),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: Icon(Icons.add_box_rounded, color: Colors.greenAccent, size: 24),
+                      tooltip: "Add New Product",
+                      onPressed: () => _showAddProductDialog(context),
+                    ),
+                  ],
+                ),
                 
                 // Image Preview
                 Obx(() {
@@ -660,6 +672,71 @@ class InventoryView extends GetView<InventoryController> {
                       ),
                       onPressed: () async {
                         final success = await controller.addParty();
+                        if (success) {
+                          Get.back();
+                        }
+                      },
+                      child: const Text("Save", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                )
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showAddProductDialog(BuildContext context) {
+    Get.dialog(
+      Dialog(
+        backgroundColor: AppColor.primary900,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  "Add New Product",
+                  style: TextStyle(
+                    color: AppColor.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                _buildFormInput("SKU Code*", controller.newSkuController),
+                const SizedBox(height: 12),
+                _buildFormInput("Product Name*", controller.newDescController),
+                const SizedBox(height: 12),
+                _buildFormInput("Image URL", controller.newImgUrlController),
+                const SizedBox(height: 12),
+                _buildFormInput("Sizes (comma separated, e.g. S,M,L)", controller.newSizesController),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Get.back(),
+                      child: Text("Cancel", style: TextStyle(color: AppColor.primary600, fontSize: 15)),
+                    ),
+                    const SizedBox(width: 12),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green.shade700,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      onPressed: () async {
+                        final success = await controller.addProduct();
                         if (success) {
                           Get.back();
                         }

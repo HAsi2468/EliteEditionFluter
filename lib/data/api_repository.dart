@@ -103,4 +103,9 @@ class ApiRepository extends GetxService {
     var res = await apiProvider.delete("${ApiUrl.party}/$id");
     return res;
   }
+
+  Future<dynamic> createProduct(Map<String, dynamic> body) async {
+    var res = await apiProvider.post(ApiUrl.productBase, body);
+    return res;
+  }
 }
