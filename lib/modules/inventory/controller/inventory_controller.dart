@@ -14,6 +14,13 @@ class InventoryController extends GetxController {
   RxList<InventoryItemModel> inventoryList = RxList();
   RxString searchQuery = "".obs;
 
+  RxBool isDarkMode = true.obs;
+  RxBool isActionLoading = false.obs;
+
+  void toggleTheme() {
+    isDarkMode.value = !isDarkMode.value;
+  }
+
   // Catalog list options
   RxList<PartyModel> partiesList = RxList();
   RxList<dynamic> productsList = RxList();
@@ -168,10 +175,7 @@ class InventoryController extends GetxController {
     }
 
     try {
-      Get.dialog(
-        const Center(child: CircularProgressIndicator(color: Colors.white)),
-        barrierDismissible: false,
-      );
+      isActionLoading.value = true;
 
       final Map<String, dynamic> body = {
         "name": name,
@@ -180,7 +184,6 @@ class InventoryController extends GetxController {
       };
 
       var res = await apiRepository.createParty(body);
-      Get.back(); // Pop loading dialog
 
       if (res != false) {
         AppSnacks.successSnack(message: "Party '$name' added successfully.");
@@ -192,8 +195,9 @@ class InventoryController extends GetxController {
         return true;
       }
     } catch (e) {
-      Get.back();
       print("Error adding party: $e");
+    } finally {
+      isActionLoading.value = false;
     }
     return false;
   }
@@ -224,10 +228,7 @@ class InventoryController extends GetxController {
     }
 
     try {
-      Get.dialog(
-        const Center(child: CircularProgressIndicator(color: Colors.white)),
-        barrierDismissible: false,
-      );
+      isActionLoading.value = true;
 
       final Map<String, dynamic> body = {
         "party": selectedParty.value.trim(),
@@ -242,7 +243,6 @@ class InventoryController extends GetxController {
       };
 
       var res = await apiRepository.createInventory(body);
-      Get.back(); // Pop loading dialog
 
       if (res != false) {
         AppSnacks.successSnack(message: "Inventory item added successfully.");
@@ -251,8 +251,9 @@ class InventoryController extends GetxController {
         fetchInventory();
       }
     } catch (e) {
-      Get.back();
       print("Error adding inventory item: $e");
+    } finally {
+      isActionLoading.value = false;
     }
   }
 
@@ -265,10 +266,7 @@ class InventoryController extends GetxController {
     }
 
     try {
-      Get.dialog(
-        const Center(child: CircularProgressIndicator(color: Colors.white)),
-        barrierDismissible: false,
-      );
+      isActionLoading.value = true;
 
       final Map<String, dynamic> body = {
         "party": selectedParty.value.trim(),
@@ -283,7 +281,6 @@ class InventoryController extends GetxController {
       };
 
       var res = await apiRepository.updateInventory(id, body);
-      Get.back(); // Pop loading dialog
 
       if (res != false) {
         AppSnacks.successSnack(message: "Inventory item updated successfully.");
@@ -292,28 +289,26 @@ class InventoryController extends GetxController {
         fetchInventory();
       }
     } catch (e) {
-      Get.back();
       print("Error updating inventory item: $e");
+    } finally {
+      isActionLoading.value = false;
     }
   }
 
   Future<void> deleteInventoryItem(String id) async {
     try {
-      Get.dialog(
-        const Center(child: CircularProgressIndicator(color: Colors.white)),
-        barrierDismissible: false,
-      );
+      isActionLoading.value = true;
 
       var res = await apiRepository.deleteInventory(id);
-      Get.back(); // Pop loading dialog
 
       if (res != false) {
         AppSnacks.successSnack(message: "Inventory item deleted successfully.");
         fetchInventory();
       }
     } catch (e) {
-      Get.back();
       print("Error deleting inventory item: $e");
+    } finally {
+      isActionLoading.value = false;
     }
   }
 
@@ -331,10 +326,7 @@ class InventoryController extends GetxController {
     }
 
     try {
-      Get.dialog(
-        const Center(child: CircularProgressIndicator(color: Colors.white)),
-        barrierDismissible: false,
-      );
+      isActionLoading.value = true;
 
       final Map<String, dynamic> body = {
         "skuCode": sku,
@@ -344,7 +336,6 @@ class InventoryController extends GetxController {
       };
 
       var res = await apiRepository.createProduct(body);
-      Get.back(); // Pop loading dialog
 
       if (res != false) {
         AppSnacks.successSnack(message: "Product '$sku' created successfully.");
@@ -365,8 +356,9 @@ class InventoryController extends GetxController {
         return true;
       }
     } catch (e) {
-      Get.back();
       print("Error creating product: $e");
+    } finally {
+      isActionLoading.value = false;
     }
     return false;
   }

@@ -1,5 +1,6 @@
 abstract class ApiUrl{
-  static const String baseUrl = "http://3.7.174.180:3001/v1";
+  static const String baseUrl = "http://localhost:3001/v1";
+  // static const String baseUrl = "http://3.7.174.180:3001/v1";
   // static const String baseUrl = "http://elite_edition.api.rdtextiles.com";
   // static const String baseUrl = "http://127.0.0.1:3001/v1";
   static const String register = "auth/register";
