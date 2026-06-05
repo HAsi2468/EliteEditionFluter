@@ -55,4 +55,25 @@ class ApiRepository extends GetxService {
     var res = await apiProvider.get(ApiUrl.brandReport, param, isLog: isLog);
     return res;
   }
+
+  Future<dynamic> getInventoryList(Map<String, String>? param,
+      {bool isLog = false}) async {
+    var res = await apiProvider.get(ApiUrl.inventory, param, isLog: isLog);
+    return res;
+  }
+
+  Future<dynamic> createInventory(Map<String, dynamic> body) async {
+    var res = await apiProvider.post(ApiUrl.inventory, body);
+    return res;
+  }
+
+  Future<dynamic> updateInventory(String id, Map<String, dynamic> body) async {
+    var res = await apiProvider.put("${ApiUrl.inventory}/$id", body);
+    return res;
+  }
+
+  Future<dynamic> deleteInventory(String id) async {
+    var res = await apiProvider.delete("${ApiUrl.inventory}/$id");
+    return res;
+  }
 }

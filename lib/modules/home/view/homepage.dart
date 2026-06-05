@@ -118,19 +118,33 @@ class Homepage extends StatelessWidget {
         children: [
           Container(
             width: size.width,
-            height: size.height * 0.17,
+            height: size.height * 0.23,
             decoration: BoxDecoration(color: AppColor.primary800),
             child: Column(
               children: [
                 const SizedBox(
-                  height: 60,
+                  height: 40,
                 ),
-                // const AppAssetImage(
-                //   image: "assets/icons/Logo.png",
-                //   height: 50,
-                //   // width: 50,
-                //   // fit: BoxFit.fill,
-                // ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "Elite Edition",
+                        style: TextStyle(
+                          color: AppColor.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.inventory_2_outlined, color: AppColor.white, size: 28),
+                        onPressed: () => Get.toNamed(AppRoutes.inventory),
+                      ),
+                    ],
+                  ),
+                ),
                 const SizedBox(
                   height: 5,
                 ),

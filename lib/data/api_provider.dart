@@ -43,4 +43,37 @@ class ApiProvider extends GetxService {
       return false;
     }
   }
+
+  Future<dynamic> put(String endpoint, Map body,
+      {Map<String, String>? headers}) async {
+    print("API CALL PUT $endpoint => $body");
+    final response = await http.put(
+      Uri.parse('${ApiUrl.baseUrl}/$endpoint'),
+      body: body,
+    );
+    print("${ApiUrl.baseUrl}/$endpoint RESPONSE BODY ${response.statusCode} ===> ${response.body}");
+    var result = json.decode(response.body);
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return result;
+    } else {
+      AppSnacks.errorSnack(message: result['message'] ?? result['error'] ?? 'Update failed');
+      return false;
+    }
+  }
+
+  Future<dynamic> delete(String endpoint,
+      {Map<String, String>? headers}) async {
+    print("API CALL DELETE $endpoint");
+    final response = await http.delete(
+      Uri.parse('${ApiUrl.baseUrl}/$endpoint'),
+    );
+    print("${ApiUrl.baseUrl}/$endpoint RESPONSE BODY ${response.statusCode} ===> ${response.body}");
+    var result = json.decode(response.body);
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return result;
+    } else {
+      AppSnacks.errorSnack(message: result['message'] ?? result['error'] ?? 'Delete failed');
+      return false;
+    }
+  }
 }

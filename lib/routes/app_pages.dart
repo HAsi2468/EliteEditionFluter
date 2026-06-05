@@ -9,6 +9,8 @@ import 'package:elite_edition/modules/product_details/view/product_details_view.
 import 'package:elite_edition/modules/splash/bindings/splash_binding.dart';
 import 'package:elite_edition/modules/splash/view/splash_view.dart';
 import 'package:elite_edition/routes/app_routes.dart';
+import 'package:elite_edition/modules/inventory/bindings/inventory_binding.dart';
+import 'package:elite_edition/modules/inventory/view/inventory_view.dart';
 
 class AppPages {
   AppPages._();
@@ -40,6 +42,11 @@ class AppPages {
       name: AppRoutes.productDetails,
       page: () => ProductDetailsView(),
       binding: ProductDetailsBinding(),
+    ),
+    GetPage(
+      name: AppRoutes.inventory,
+      page: () => const InventoryView(),
+      binding: InventoryBinding(),
     ),
   ];
 }
