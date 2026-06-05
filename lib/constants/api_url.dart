@@ -10,6 +10,8 @@ abstract class ApiUrl{
   static const String productReport = "products/report";
   static const String brandReport = "products/brandReport";
   static const String inventory = "inventory";
+  static const String productList = "products/list";
+  static const String party = "party";
 
   static String getFullImageUrl(String? url) {
     if (url == null || url.isEmpty || url == "null") return "https://placehold.co/600x400/png?text=Elite+Edition";

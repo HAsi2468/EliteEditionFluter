@@ -76,4 +76,31 @@ class ApiRepository extends GetxService {
     var res = await apiProvider.delete("${ApiUrl.inventory}/$id");
     return res;
   }
+
+  Future<dynamic> getProductList(Map<String, String>? param,
+      {bool isLog = false}) async {
+    var res = await apiProvider.get(ApiUrl.productList, param, isLog: isLog);
+    return res;
+  }
+
+  Future<dynamic> getPartyList(Map<String, String>? param,
+      {bool isLog = false}) async {
+    var res = await apiProvider.get(ApiUrl.party, param, isLog: isLog);
+    return res;
+  }
+
+  Future<dynamic> createParty(Map<String, dynamic> body) async {
+    var res = await apiProvider.post(ApiUrl.party, body);
+    return res;
+  }
+
+  Future<dynamic> updateParty(String id, Map<String, dynamic> body) async {
+    var res = await apiProvider.put("${ApiUrl.party}/$id", body);
+    return res;
+  }
+
+  Future<dynamic> deleteParty(String id) async {
+    var res = await apiProvider.delete("${ApiUrl.party}/$id");
+    return res;
+  }
 }

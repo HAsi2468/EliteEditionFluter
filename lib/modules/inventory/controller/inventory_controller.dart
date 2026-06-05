@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:elite_edition/data/api_repository.dart';
 import 'package:elite_edition/modules/inventory/model/inventory_item_model.dart';
+import 'package:elite_edition/modules/inventory/model/party_model.dart';
 import 'package:elite_edition/shared_widget/app_snacks.dart';
-import 'package:elite_edition/constants/app_color.dart';
 
 class InventoryController extends GetxController {
   final ApiRepository apiRepository;
@@ -14,14 +14,28 @@ class InventoryController extends GetxController {
   RxList<InventoryItemModel> inventoryList = RxList();
   RxString searchQuery = "".obs;
 
+  // Catalog list options
+  RxList<PartyModel> partiesList = RxList();
+  RxList<dynamic> productsList = RxList();
+  RxList<String> sizeOptionsList = RxList();
+
+  // Selection states
+  RxString selectedParty = "".obs;
+  RxString selectedSkuCode = "".obs;
+  RxString selectedImageUrl = "".obs;
+  RxString selectedSize = "".obs;
+
   // Form controllers
-  final TextEditingController partyController = TextEditingController();
   final TextEditingController itemNameController = TextEditingController();
-  final TextEditingController sizeController = TextEditingController();
   final TextEditingController stockController = TextEditingController();
   final TextEditingController salePriceController = TextEditingController();
   final TextEditingController purchasePriceController = TextEditingController();
   final TextEditingController qtyController = TextEditingController();
+
+  // Inline Party Form Controllers
+  final TextEditingController newPartyNameController = TextEditingController();
+  final TextEditingController newPartyPhoneController = TextEditingController();
+  final TextEditingController newPartyAddressController = TextEditingController();
 
   final TextEditingController searchController = TextEditingController();
 
@@ -29,25 +43,32 @@ class InventoryController extends GetxController {
   void onInit() {
     super.onInit();
     fetchInventory();
+    fetchParties();
+    fetchProducts();
   }
 
   @override
   void onClose() {
-    partyController.dispose();
     itemNameController.dispose();
-    sizeController.dispose();
     stockController.dispose();
     salePriceController.dispose();
     purchasePriceController.dispose();
     qtyController.dispose();
+    newPartyNameController.dispose();
+    newPartyPhoneController.dispose();
+    newPartyAddressController.dispose();
     searchController.dispose();
     super.onClose();
   }
 
   void clearForm() {
-    partyController.clear();
+    selectedParty.value = "";
+    selectedSkuCode.value = "";
+    selectedImageUrl.value = "";
+    selectedSize.value = "";
+    sizeOptionsList.clear();
+    
     itemNameController.clear();
-    sizeController.clear();
     stockController.clear();
     salePriceController.clear();
     purchasePriceController.clear();
@@ -55,13 +76,32 @@ class InventoryController extends GetxController {
   }
 
   void populateForm(InventoryItemModel item) {
-    partyController.text = item.party;
+    selectedParty.value = item.party;
     itemNameController.text = item.itemName;
-    sizeController.text = item.size;
+    selectedSkuCode.value = item.skuCode;
+    selectedImageUrl.value = item.imageUrl;
     stockController.text = item.currentlyAvailableStock.toString();
     salePriceController.text = item.salePrice.toString();
     purchasePriceController.text = item.purchasePrice.toString();
     qtyController.text = item.qty.toString();
+
+    // Populate sizes list based on product SKU if found
+    sizeOptionsList.clear();
+    if (item.skuCode.isNotEmpty) {
+      final product = productsList.firstWhere(
+        (p) => p["skuCode"] == item.skuCode,
+        orElse: () => null,
+      );
+      if (product != null && product["size"] != null) {
+        sizeOptionsList.value = List<String>.from(product["size"]);
+      }
+    }
+    
+    // Ensure current size is in sizeOptionsList as fallback
+    if (item.size.isNotEmpty && !sizeOptionsList.contains(item.size)) {
+      sizeOptionsList.add(item.size);
+    }
+    selectedSize.value = item.size;
   }
 
   Future<void> fetchInventory() async {
@@ -85,10 +125,90 @@ class InventoryController extends GetxController {
     }
   }
 
+  Future<void> fetchParties() async {
+    try {
+      var res = await apiRepository.getPartyList(null, isLog: false);
+      if (res != false && res != null) {
+        var list = List<PartyModel>.from(
+            res.map((x) => PartyModel.fromJson(x)));
+        partiesList.value = list;
+      }
+    } catch (e) {
+      print("Error fetching parties: $e");
+    }
+  }
+
+  Future<void> fetchProducts() async {
+    try {
+      // Fetch products with a high limit to get all database options
+      var res = await apiRepository.getProductList({"limit": "200"}, isLog: false);
+      if (res != false && res != null) {
+        productsList.value = List<dynamic>.from(res);
+      }
+    } catch (e) {
+      print("Error fetching products: $e");
+    }
+  }
+
+  Future<bool> addParty() async {
+    final name = newPartyNameController.text.trim();
+    if (name.isEmpty) {
+      AppSnacks.errorSnack(message: "Party name is required.");
+      return false;
+    }
+
+    try {
+      Get.dialog(
+        const Center(child: CircularProgressIndicator(color: Colors.white)),
+        barrierDismissible: false,
+      );
+
+      final Map<String, dynamic> body = {
+        "name": name,
+        "phone": newPartyPhoneController.text.trim(),
+        "address": newPartyAddressController.text.trim(),
+      };
+
+      var res = await apiRepository.createParty(body);
+      Get.back(); // Pop loading dialog
+
+      if (res != false) {
+        AppSnacks.successSnack(message: "Party '$name' added successfully.");
+        newPartyNameController.clear();
+        newPartyPhoneController.clear();
+        newPartyAddressController.clear();
+        await fetchParties();
+        selectedParty.value = name;
+        return true;
+      }
+    } catch (e) {
+      Get.back();
+      print("Error adding party: $e");
+    }
+    return false;
+  }
+
+  void onProductSelected(dynamic product) {
+    if (product == null) return;
+    itemNameController.text = product["description"] ?? "";
+    selectedSkuCode.value = product["skuCode"] ?? "";
+    selectedImageUrl.value = product["imageUrl"] ?? "";
+    
+    sizeOptionsList.clear();
+    if (product["size"] != null) {
+      sizeOptionsList.value = List<String>.from(product["size"]);
+    }
+    if (sizeOptionsList.isNotEmpty) {
+      selectedSize.value = sizeOptionsList[0];
+    } else {
+      selectedSize.value = "";
+    }
+  }
+
   Future<void> addInventoryItem() async {
-    if (partyController.text.trim().isEmpty ||
+    if (selectedParty.value.trim().isEmpty ||
         itemNameController.text.trim().isEmpty ||
-        sizeController.text.trim().isEmpty) {
+        selectedSize.value.trim().isEmpty) {
       AppSnacks.errorSnack(message: "Party, Item Name, and Size are required.");
       return;
     }
@@ -100,13 +220,15 @@ class InventoryController extends GetxController {
       );
 
       final Map<String, dynamic> body = {
-        "party": partyController.text.trim(),
+        "party": selectedParty.value.trim(),
         "itemName": itemNameController.text.trim(),
-        "size": sizeController.text.trim(),
+        "size": selectedSize.value.trim(),
         "currentlyAvailableStock": int.tryParse(stockController.text.trim()) ?? 0,
         "salePrice": double.tryParse(salePriceController.text.trim()) ?? 0.0,
         "purchasePrice": double.tryParse(purchasePriceController.text.trim()) ?? 0.0,
         "qty": int.tryParse(qtyController.text.trim()) ?? 0,
+        "imageUrl": selectedImageUrl.value,
+        "skuCode": selectedSkuCode.value,
       };
 
       var res = await apiRepository.createInventory(body);
@@ -125,9 +247,9 @@ class InventoryController extends GetxController {
   }
 
   Future<void> updateInventoryItem(String id) async {
-    if (partyController.text.trim().isEmpty ||
+    if (selectedParty.value.trim().isEmpty ||
         itemNameController.text.trim().isEmpty ||
-        sizeController.text.trim().isEmpty) {
+        selectedSize.value.trim().isEmpty) {
       AppSnacks.errorSnack(message: "Party, Item Name, and Size are required.");
       return;
     }
@@ -139,13 +261,15 @@ class InventoryController extends GetxController {
       );
 
       final Map<String, dynamic> body = {
-        "party": partyController.text.trim(),
+        "party": selectedParty.value.trim(),
         "itemName": itemNameController.text.trim(),
-        "size": sizeController.text.trim(),
+        "size": selectedSize.value.trim(),
         "currentlyAvailableStock": int.tryParse(stockController.text.trim()) ?? 0,
         "salePrice": double.tryParse(salePriceController.text.trim()) ?? 0.0,
         "purchasePrice": double.tryParse(purchasePriceController.text.trim()) ?? 0.0,
         "qty": int.tryParse(qtyController.text.trim()) ?? 0,
+        "imageUrl": selectedImageUrl.value,
+        "skuCode": selectedSkuCode.value,
       };
 
       var res = await apiRepository.updateInventory(id, body);

@@ -7,6 +7,8 @@ class InventoryItemModel {
   final double salePrice;
   final double purchasePrice;
   final int qty;
+  final String imageUrl;
+  final String skuCode;
   final String? createdDateTime;
   final String? modifiedDateTime;
 
@@ -19,6 +21,8 @@ class InventoryItemModel {
     required this.salePrice,
     required this.purchasePrice,
     required this.qty,
+    required this.imageUrl,
+    required this.skuCode,
     this.createdDateTime,
     this.modifiedDateTime,
   });
@@ -32,6 +36,8 @@ class InventoryItemModel {
         salePrice: (json["salePrice"] ?? 0.0).toDouble(),
         purchasePrice: (json["purchasePrice"] ?? 0.0).toDouble(),
         qty: json["qty"] ?? 0,
+        imageUrl: json["imageUrl"] ?? "",
+        skuCode: json["skuCode"] ?? "",
         createdDateTime: json["created_date_time"],
         modifiedDateTime: json["modified_date_time"],
       );
@@ -44,5 +50,7 @@ class InventoryItemModel {
         "salePrice": salePrice,
         "purchasePrice": purchasePrice,
         "qty": qty,
+        "imageUrl": imageUrl,
+        "skuCode": skuCode,
       };
 }
