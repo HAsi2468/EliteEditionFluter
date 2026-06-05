@@ -58,6 +58,7 @@ class HomeController extends GetxService {
   ].obs;
   RxString selectedSort = "None".obs;
   RxInt currentPage = 1.obs;
+  RxInt selectedTabIndex = 0.obs;
   DateTime? startDateTime;
   DateTime? endDateTime;
 

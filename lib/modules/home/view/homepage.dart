@@ -12,6 +12,8 @@ import 'package:elite_edition/shared_widget/app_cache_image.dart';
 import 'package:elite_edition/shared_widget/app_image.dart';
 import 'package:elite_edition/shared_widget/app_snacks.dart';
 import 'package:elite_edition/shared_widget/textfield_widget.dart';
+import 'package:elite_edition/modules/inventory/view/inventory_view.dart';
+import 'package:elite_edition/modules/inventory/controller/inventory_controller.dart';
 
 class Homepage extends StatelessWidget {
   Homepage({super.key});
@@ -24,10 +26,11 @@ class Homepage extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColor.primary800,
       floatingActionButtonLocation: ExpandableFab.location,
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 40),
-        child: ExpandableFab(
-          distance: 70,
+      floatingActionButton: Obx(() => controller.selectedTabIndex.value == 0
+          ? Padding(
+              padding: const EdgeInsets.only(bottom: 40),
+              child: ExpandableFab(
+                distance: 70,
           openCloseStackAlignment: Alignment.centerLeft,
           pos: ExpandableFabPos.right,
           type: ExpandableFabType.up,
@@ -113,8 +116,11 @@ class Homepage extends StatelessWidget {
           //   },
           // ),
         ),
-      ),
-      body: Column(
+      ) : const SizedBox.shrink()),
+      body: Obx(() => IndexedStack(
+            index: controller.selectedTabIndex.value,
+            children: [
+              Column(
         children: [
           Container(
             width: size.width,
@@ -137,10 +143,6 @@ class Homepage extends StatelessWidget {
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
                         ),
-                      ),
-                      IconButton(
-                        icon: Icon(Icons.inventory_2_outlined, color: AppColor.white, size: 28),
-                        onPressed: () => Get.toNamed(AppRoutes.inventory),
                       ),
                     ],
                   ),
@@ -413,6 +415,38 @@ class Homepage extends StatelessWidget {
           ),
         ],
       ),
+              const InventoryView(),
+            ],
+          )),
+      bottomNavigationBar: Obx(() => BottomNavigationBar(
+            backgroundColor: AppColor.primary900,
+            currentIndex: controller.selectedTabIndex.value,
+            selectedItemColor: Colors.white,
+            unselectedItemColor: AppColor.primary600,
+            onTap: (index) {
+              controller.selectedTabIndex.value = index;
+              if (index == 1) {
+                try {
+                  final invCtrl = Get.find<InventoryController>();
+                  invCtrl.fetchInventory();
+                  invCtrl.fetchParties();
+                  invCtrl.fetchProducts();
+                } catch (e) {}
+              }
+            },
+            items: const [
+              BottomNavigationBarItem(
+                icon: Icon(Icons.analytics_outlined),
+                activeIcon: Icon(Icons.analytics),
+                label: "Sales & Orders",
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.inventory_2_outlined),
+                activeIcon: Icon(Icons.inventory_2),
+                label: "Inventory",
+              ),
+            ],
+          )),
     );
   }
 
