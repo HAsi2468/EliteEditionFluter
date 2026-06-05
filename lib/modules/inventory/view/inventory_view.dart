@@ -1089,6 +1089,13 @@ class InventoryView extends GetView<InventoryController> {
                                 ),
                               ),
                               IconButton(
+                                icon: const Icon(Icons.edit_outlined, color: Colors.blueAccent),
+                                onPressed: () {
+                                  controller.prefillPartyForm(party);
+                                  _showEditPartyDialog(context, party);
+                                },
+                              ),
+                              IconButton(
                                 icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
                                 onPressed: () => _confirmDeleteParty(context, party),
                               ),
@@ -1280,6 +1287,13 @@ class InventoryView extends GetView<InventoryController> {
                                 ),
                               ),
                               IconButton(
+                                icon: const Icon(Icons.edit_outlined, color: Colors.blueAccent),
+                                onPressed: () {
+                                  controller.prefillProductForm(product);
+                                  _showEditProductDialog(context, product);
+                                },
+                              ),
+                              IconButton(
                                 icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
                                 onPressed: () => _confirmDeleteProduct(context, product),
                               ),
@@ -1360,6 +1374,177 @@ class InventoryView extends GetView<InventoryController> {
           ],
         );
       }),
+    );
+  }
+
+  void _showEditPartyDialog(BuildContext context, PartyModel party) {
+    Get.dialog(
+      Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        child: Obx(() {
+          final bool isDark = controller.isDarkMode.value;
+          final Color dialogBg = isDark ? AppColor.primary900 : Colors.white;
+          final Color textColor = isDark ? AppColor.white : const Color(0xFF1F2937);
+          final Color labelColor = isDark ? AppColor.primary600 : const Color(0xFF4B5563);
+
+          return Container(
+            decoration: BoxDecoration(
+              color: dialogBg,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            padding: const EdgeInsets.all(20),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    "Edit Party",
+                    style: TextStyle(
+                      color: textColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildFormInput("Party Name*", controller.newPartyNameController),
+                  const SizedBox(height: 12),
+                  _buildFormInput("Phone Number", controller.newPartyPhoneController, keyboardType: TextInputType.phone),
+                  const SizedBox(height: 12),
+                  _buildFormInput("Address", controller.newPartyAddressController),
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Get.back(),
+                        child: Text("Cancel", style: TextStyle(color: labelColor, fontSize: 15)),
+                      ),
+                      const SizedBox(width: 12),
+                      Obx(() {
+                        if (controller.isActionLoading.value) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16),
+                            child: SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.greenAccent),
+                            ),
+                          );
+                        }
+                        return ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green.shade700,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          onPressed: () async {
+                            final success = await controller.editParty(party.id);
+                            if (success) {
+                              Get.back();
+                            }
+                          },
+                          child: const Text("Save", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        );
+                      }),
+                    ],
+                  )
+                ],
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  void _showEditProductDialog(BuildContext context, dynamic product) {
+    final id = product["id"] ?? product["_id"] ?? "";
+    Get.dialog(
+      Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        child: Obx(() {
+          final bool isDark = controller.isDarkMode.value;
+          final Color dialogBg = isDark ? AppColor.primary900 : Colors.white;
+          final Color textColor = isDark ? AppColor.white : const Color(0xFF1F2937);
+          final Color labelColor = isDark ? AppColor.primary600 : const Color(0xFF4B5563);
+
+          return Container(
+            decoration: BoxDecoration(
+              color: dialogBg,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            padding: const EdgeInsets.all(20),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    "Edit Product",
+                    style: TextStyle(
+                      color: textColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildFormInput("SKU Code*", controller.newSkuController),
+                  const SizedBox(height: 12),
+                  _buildFormInput("Product Name*", controller.newDescController),
+                  const SizedBox(height: 12),
+                  _buildFormInput("Image URL", controller.newImgUrlController),
+                  const SizedBox(height: 12),
+                  _buildFormInput("Sizes (comma separated, e.g. S,M,L)", controller.newSizesController),
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Get.back(),
+                        child: Text("Cancel", style: TextStyle(color: labelColor, fontSize: 15)),
+                      ),
+                      const SizedBox(width: 12),
+                      Obx(() {
+                        if (controller.isActionLoading.value) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16),
+                            child: SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.greenAccent),
+                            ),
+                          );
+                        }
+                        return ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green.shade700,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          onPressed: () async {
+                            final success = await controller.editProduct(id);
+                            if (success) {
+                              Get.back();
+                            }
+                          },
+                          child: const Text("Save", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        );
+                      }),
+                    ],
+                  )
+                ],
+              ),
+            ),
+          );
+        }),
+      ),
     );
   }
 }

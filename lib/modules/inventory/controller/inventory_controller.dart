@@ -387,6 +387,91 @@ class InventoryController extends GetxController {
     }
   }
 
+  void prefillPartyForm(PartyModel party) {
+    newPartyNameController.text = party.name;
+    newPartyPhoneController.text = party.phone;
+    newPartyAddressController.text = party.address;
+  }
+
+  Future<bool> editParty(String id) async {
+    final name = newPartyNameController.text.trim();
+    if (name.isEmpty) {
+      AppSnacks.errorSnack(message: "Party name is required.");
+      return false;
+    }
+
+    try {
+      isActionLoading.value = true;
+
+      final Map<String, dynamic> body = {
+        "name": name,
+        "phone": newPartyPhoneController.text.trim(),
+        "address": newPartyAddressController.text.trim(),
+      };
+
+      var res = await apiRepository.updateParty(id, body);
+
+      if (res != false) {
+        AppSnacks.successSnack(message: "Party updated successfully.");
+        newPartyNameController.clear();
+        newPartyPhoneController.clear();
+        newPartyAddressController.clear();
+        await fetchParties();
+        return true;
+      }
+    } catch (e) {
+      print("Error updating party: $e");
+    } finally {
+      isActionLoading.value = false;
+    }
+    return false;
+  }
+
+  void prefillProductForm(dynamic product) {
+    newSkuController.text = product["skuCode"] ?? "";
+    newDescController.text = product["description"] ?? "";
+    newImgUrlController.text = product["imageUrl"] ?? "";
+    final sizeList = product["size"] != null ? List<String>.from(product["size"]) : <String>[];
+    newSizesController.text = sizeList.join(', ');
+  }
+
+  Future<bool> editProduct(String id) async {
+    final sku = newSkuController.text.trim();
+    final desc = newDescController.text.trim();
+    if (sku.isEmpty || desc.isEmpty) {
+      AppSnacks.errorSnack(message: "SKU Code and Product Name are required.");
+      return false;
+    }
+
+    try {
+      isActionLoading.value = true;
+
+      final Map<String, dynamic> body = {
+        "skuCode": sku,
+        "description": desc,
+        "imageUrl": newImgUrlController.text.trim(),
+        "size": newSizesController.text.trim(),
+      };
+
+      var res = await apiRepository.updateProduct(id, body);
+
+      if (res != false) {
+        AppSnacks.successSnack(message: "Product updated successfully.");
+        newSkuController.clear();
+        newDescController.clear();
+        newImgUrlController.clear();
+        newSizesController.clear();
+        await fetchProducts();
+        return true;
+      }
+    } catch (e) {
+      print("Error updating product: $e");
+    } finally {
+      isActionLoading.value = false;
+    }
+    return false;
+  }
+
   Future<void> deleteProduct(String id) async {
     try {
       isActionLoading.value = true;
