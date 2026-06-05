@@ -657,7 +657,7 @@ class InventoryView extends GetView<InventoryController> {
                   const SizedBox(height: 12),
                   _buildFormInput("Initial Total Qty", controller.qtyController, keyboardType: TextInputType.number),
                   const SizedBox(height: 12),
-                  _buildFormInput("Available Stock", controller.stockController, keyboardType: TextInputType.number),
+                  _buildFormInput("Available Stock", controller.stockController, keyboardType: TextInputType.number, enabled: false),
                   const SizedBox(height: 12),
                   _buildFormInput("Purchase Price (₹)", controller.purchasePriceController, keyboardType: const TextInputType.numberWithOptions(decimal: true)),
                   const SizedBox(height: 12),
@@ -890,9 +890,15 @@ class InventoryView extends GetView<InventoryController> {
     );
   }
 
-  Widget _buildFormInput(String label, TextEditingController txtController, {TextInputType keyboardType = TextInputType.text}) {
+  Widget _buildFormInput(
+    String label, 
+    TextEditingController txtController, {
+    TextInputType keyboardType = TextInputType.text,
+    bool enabled = true,
+  }) {
     final bool isDark = controller.isDarkMode.value;
     final Color textColor = isDark ? AppColor.white : const Color(0xFF1F2937);
+    final Color disabledTextColor = isDark ? Colors.white38 : Colors.black38;
     final Color labelColor = isDark ? AppColor.primary600 : const Color(0xFF4B5563);
     final Color inputBg = isDark ? AppColor.primary800 : const Color(0xFFF3F4F6);
     final Color hintColor = isDark ? AppColor.primary600.withValues(alpha: 0.5) : const Color(0xFF9CA3AF);
@@ -912,7 +918,11 @@ class InventoryView extends GetView<InventoryController> {
         TextField(
           controller: txtController,
           keyboardType: keyboardType,
-          style: TextStyle(color: textColor, fontSize: 14),
+          enabled: enabled,
+          style: TextStyle(
+            color: enabled ? textColor : disabledTextColor,
+            fontSize: 14,
+          ),
           decoration: InputDecoration(
             fillColor: inputBg,
             filled: true,
@@ -925,6 +935,10 @@ class InventoryView extends GetView<InventoryController> {
             ),
             focusedBorder: OutlineInputBorder(
               borderSide: BorderSide(color: isDark ? AppColor.primary600 : const Color(0xFF9CA3AF)),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            disabledBorder: OutlineInputBorder(
+              borderSide: BorderSide(color: isDark ? Colors.white12 : const Color(0xFFE5E7EB)),
               borderRadius: BorderRadius.circular(8),
             ),
           ),

@@ -16,6 +16,7 @@ class InventoryController extends GetxController {
 
   RxBool isDarkMode = true.obs;
   RxBool isActionLoading = false.obs;
+  RxBool isEditMode = false.obs;
 
   void toggleTheme() {
     isDarkMode.value = !isDarkMode.value;
@@ -58,6 +59,11 @@ class InventoryController extends GetxController {
     fetchInventory();
     fetchParties();
     fetchProducts();
+    qtyController.addListener(() {
+      if (!isEditMode.value) {
+        stockController.text = qtyController.text;
+      }
+    });
   }
 
   @override
@@ -79,6 +85,7 @@ class InventoryController extends GetxController {
   }
 
   void clearForm() {
+    isEditMode.value = false;
     selectedParty.value = "";
     selectedSkuCode.value = "";
     selectedImageUrl.value = "";
@@ -93,6 +100,7 @@ class InventoryController extends GetxController {
   }
 
   void populateForm(InventoryItemModel item) {
+    isEditMode.value = true;
     selectedParty.value = item.party;
     itemNameController.text = item.itemName;
     selectedSkuCode.value = item.skuCode;
