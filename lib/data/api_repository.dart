@@ -1,0 +1,58 @@
+import 'package:get/get.dart';
+import 'package:elite_edition/constants/api_url.dart';
+import 'package:elite_edition/data/api_provider.dart';
+
+class ApiRepository extends GetxService {
+  final ApiProvider apiProvider;
+
+  ApiRepository({required this.apiProvider});
+
+  Future<dynamic> registerUser({
+    required String name,
+    required String email,
+    required String password,
+  }) async {
+    var body = {"name": name, "email": email, "password": password};
+    var res = await apiProvider.post(ApiUrl.register, body);
+    return res;
+  }
+
+  Future<dynamic> loginUser({
+    required String email,
+    required String password,
+  }) async {
+    var body = {"email": email, "password": password};
+    var res = await apiProvider.post(ApiUrl.login, body);
+    return res;
+  }
+
+  Future<dynamic> getFilterData(Map<String, String>? param,
+      {bool isLog = false}) async {
+    var res = await apiProvider.get(ApiUrl.filter, param, isLog: isLog);
+    return res;
+  }
+
+  Future<dynamic> getListData(Map<String, String>? param,
+      {bool isLog = false}) async {
+    var res = await apiProvider.get(ApiUrl.product, param, isLog: isLog);
+    return res;
+  }
+
+  Future<dynamic> getProductDetailsData(Map<String, String>? param,
+      {bool isLog = false}) async {
+    var res = await apiProvider.get(ApiUrl.productDetails, param, isLog: isLog);
+    return res;
+  }
+
+  Future<dynamic> getReport(Map<String, String>? param,
+      {bool isLog = false}) async {
+    var res = await apiProvider.get(ApiUrl.productReport, param, isLog: isLog);
+    return res;
+  }
+
+  Future<dynamic> getBrandReport(Map<String, String>? param,
+      {bool isLog = false}) async {
+    var res = await apiProvider.get(ApiUrl.brandReport, param, isLog: isLog);
+    return res;
+  }
+}
