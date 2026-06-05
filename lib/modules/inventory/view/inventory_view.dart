@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:elite_edition/modules/inventory/controller/inventory_controller.dart';
 import 'package:elite_edition/modules/inventory/model/inventory_item_model.dart';
+import 'package:elite_edition/modules/inventory/model/party_model.dart';
 import 'package:elite_edition/constants/app_color.dart';
 import 'package:elite_edition/constants/api_url.dart';
 import 'package:elite_edition/shared_widget/textfield_widget.dart';
@@ -60,6 +61,39 @@ class InventoryView extends GetView<InventoryController> {
                 controller.clearForm();
                 _showAddEditDialog(context, null);
               },
+            ),
+            PopupMenuButton<String>(
+              icon: Icon(Icons.more_vert_rounded, color: textColor),
+              color: isDark ? AppColor.primary900 : Colors.white,
+              onSelected: (value) {
+                if (value == 'parties') {
+                  _showManagePartiesDialog(context);
+                } else if (value == 'products') {
+                  _showManageProductsDialog(context);
+                }
+              },
+              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                PopupMenuItem<String>(
+                  value: 'parties',
+                  child: Row(
+                    children: [
+                      Icon(Icons.business_outlined, color: textColor, size: 18),
+                      const SizedBox(width: 8),
+                      Text('Manage Parties', style: TextStyle(color: textColor)),
+                    ],
+                  ),
+                ),
+                PopupMenuItem<String>(
+                  value: 'products',
+                  child: Row(
+                    children: [
+                      Icon(Icons.category_outlined, color: textColor, size: 18),
+                      const SizedBox(width: 8),
+                      Text('Manage Products', style: TextStyle(color: textColor)),
+                    ],
+                  ),
+                ),
+              ],
             ),
             const SizedBox(width: 10),
           ],
@@ -940,6 +974,370 @@ class InventoryView extends GetView<InventoryController> {
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade700),
                 onPressed: () async {
                   await controller.deleteInventoryItem(item.id);
+                  Get.back();
+                },
+                child: const Text("Delete", style: TextStyle(color: Colors.white)),
+              );
+            }),
+          ],
+        );
+      }),
+    );
+  }
+
+  void _showManagePartiesDialog(BuildContext context) {
+    Get.dialog(
+      Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        child: Obx(() {
+          final bool isDark = controller.isDarkMode.value;
+          final Color dialogBg = isDark ? AppColor.primary900 : Colors.white;
+          final Color textColor = isDark ? AppColor.white : const Color(0xFF1F2937);
+          final Color labelColor = isDark ? AppColor.primary600 : const Color(0xFF4B5563);
+          final Color cardBg = isDark ? AppColor.primary800 : const Color(0xFFF3F4F6);
+
+          return Container(
+            decoration: BoxDecoration(
+              color: dialogBg,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            padding: const EdgeInsets.all(20),
+            width: double.infinity,
+            constraints: const BoxConstraints(maxHeight: 500),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  "Manage Parties",
+                  style: TextStyle(
+                    color: textColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: Obx(() {
+                    if (controller.partiesList.isEmpty) {
+                      return Center(
+                        child: Text(
+                          "No parties found",
+                          style: TextStyle(color: labelColor, fontSize: 14),
+                        ),
+                      );
+                    }
+                    return ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: controller.partiesList.length,
+                      separatorBuilder: (context, index) => const SizedBox(height: 8),
+                      itemBuilder: (context, index) {
+                        final party = controller.partiesList[index];
+                        return Container(
+                          decoration: BoxDecoration(
+                            color: cardBg,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      party.name,
+                                      style: TextStyle(
+                                        color: textColor,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    if (party.phone.isNotEmpty) ...[
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        "Phone: ${party.phone}",
+                                        style: TextStyle(color: labelColor, fontSize: 12),
+                                      ),
+                                    ],
+                                    if (party.address.isNotEmpty) ...[
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        "Address: ${party.address}",
+                                        style: TextStyle(color: labelColor, fontSize: 12),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
+                                onPressed: () => _confirmDeleteParty(context, party),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    );
+                  }),
+                ),
+                const SizedBox(height: 16),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () => Get.back(),
+                    child: Text(
+                      "Close",
+                      style: TextStyle(color: labelColor, fontSize: 16),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  void _confirmDeleteParty(BuildContext context, PartyModel party) {
+    Get.dialog(
+      Obx(() {
+        final bool isDark = controller.isDarkMode.value;
+        final Color dialogBg = isDark ? AppColor.primary900 : Colors.white;
+        final Color textColor = isDark ? AppColor.white : const Color(0xFF1F2937);
+        final Color textSecondary = isDark ? AppColor.primary600 : const Color(0xFF4B5563);
+
+        return AlertDialog(
+          backgroundColor: dialogBg,
+          title: Text(
+            "Delete Party",
+            style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
+          ),
+          content: Text(
+            "Are you sure you want to delete the party '${party.name}'? This cannot be undone.",
+            style: TextStyle(color: textSecondary),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Get.back(),
+              child: Text(
+                "Cancel",
+                style: TextStyle(color: textSecondary),
+              ),
+            ),
+            Obx(() {
+              if (controller.isActionLoading.value) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.redAccent),
+                  ),
+                );
+              }
+              return ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade700),
+                onPressed: () async {
+                  await controller.deleteParty(party.id);
+                  Get.back();
+                },
+                child: const Text("Delete", style: TextStyle(color: Colors.white)),
+              );
+            }),
+          ],
+        );
+      }),
+    );
+  }
+
+  void _showManageProductsDialog(BuildContext context) {
+    Get.dialog(
+      Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        child: Obx(() {
+          final bool isDark = controller.isDarkMode.value;
+          final Color dialogBg = isDark ? AppColor.primary900 : Colors.white;
+          final Color textColor = isDark ? AppColor.white : const Color(0xFF1F2937);
+          final Color labelColor = isDark ? AppColor.primary600 : const Color(0xFF4B5563);
+          final Color cardBg = isDark ? AppColor.primary800 : const Color(0xFFF3F4F6);
+
+          return Container(
+            decoration: BoxDecoration(
+              color: dialogBg,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            padding: const EdgeInsets.all(20),
+            width: double.infinity,
+            constraints: const BoxConstraints(maxHeight: 500),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  "Manage Products",
+                  style: TextStyle(
+                    color: textColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: Obx(() {
+                    if (controller.productsList.isEmpty) {
+                      return Center(
+                        child: Text(
+                          "No products found",
+                          style: TextStyle(color: labelColor, fontSize: 14),
+                        ),
+                      );
+                    }
+                    return ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: controller.productsList.length,
+                      separatorBuilder: (context, index) => const SizedBox(height: 8),
+                      itemBuilder: (context, index) {
+                        final product = controller.productsList[index];
+                        final img = product["imageUrl"] ?? "";
+                        final name = product["description"] ?? "";
+                        final sku = product["skuCode"] ?? "";
+                        final sizeList = product["size"] != null ? List<String>.from(product["size"]) : <String>[];
+
+                        return Container(
+                          decoration: BoxDecoration(
+                            color: cardBg,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          padding: const EdgeInsets.all(8),
+                          child: Row(
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(6),
+                                child: Container(
+                                  width: 50,
+                                  height: 50,
+                                  color: isDark ? AppColor.primary900 : const Color(0xFFE5E7EB),
+                                  child: Image.network(
+                                    ApiUrl.getFullImageUrl(img),
+                                    width: 50,
+                                    height: 50,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (c, e, s) => Icon(Icons.image, size: 24, color: labelColor),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      name,
+                                      style: TextStyle(
+                                        color: textColor,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    Text(
+                                      "SKU: $sku",
+                                      style: TextStyle(color: labelColor, fontSize: 12),
+                                    ),
+                                    if (sizeList.isNotEmpty) ...[
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        "Sizes: ${sizeList.join(', ')}",
+                                        style: TextStyle(color: labelColor, fontSize: 11),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
+                                onPressed: () => _confirmDeleteProduct(context, product),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    );
+                  }),
+                ),
+                const SizedBox(height: 16),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () => Get.back(),
+                    child: Text(
+                      "Close",
+                      style: TextStyle(color: labelColor, fontSize: 16),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  void _confirmDeleteProduct(BuildContext context, dynamic product) {
+    final sku = product["skuCode"] ?? "";
+    final id = product["id"] ?? product["_id"] ?? "";
+    Get.dialog(
+      Obx(() {
+        final bool isDark = controller.isDarkMode.value;
+        final Color dialogBg = isDark ? AppColor.primary900 : Colors.white;
+        final Color textColor = isDark ? AppColor.white : const Color(0xFF1F2937);
+        final Color textSecondary = isDark ? AppColor.primary600 : const Color(0xFF4B5563);
+
+        return AlertDialog(
+          backgroundColor: dialogBg,
+          title: Text(
+            "Delete Product",
+            style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
+          ),
+          content: Text(
+            "Are you sure you want to delete the product with SKU '$sku'? This cannot be undone.",
+            style: TextStyle(color: textSecondary),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Get.back(),
+              child: Text(
+                "Cancel",
+                style: TextStyle(color: textSecondary),
+              ),
+            ),
+            Obx(() {
+              if (controller.isActionLoading.value) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.redAccent),
+                  ),
+                );
+              }
+              return ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade700),
+                onPressed: () async {
+                  await controller.deleteProduct(id);
                   Get.back();
                 },
                 child: const Text("Delete", style: TextStyle(color: Colors.white)),

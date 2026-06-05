@@ -362,4 +362,37 @@ class InventoryController extends GetxController {
     }
     return false;
   }
+
+  Future<void> deleteParty(String id) async {
+    try {
+      isActionLoading.value = true;
+      var res = await apiRepository.deleteParty(id);
+      if (res != false) {
+        AppSnacks.successSnack(message: "Party deleted successfully.");
+        await fetchParties();
+        selectedParty.value = "";
+      }
+    } catch (e) {
+      print("Error deleting party: $e");
+    } finally {
+      isActionLoading.value = false;
+    }
+  }
+
+  Future<void> deleteProduct(String id) async {
+    try {
+      isActionLoading.value = true;
+      var res = await apiRepository.deleteProduct(id);
+      if (res != false) {
+        AppSnacks.successSnack(message: "Product deleted successfully.");
+        await fetchProducts();
+        selectedSkuCode.value = "";
+        selectedImageUrl.value = "";
+      }
+    } catch (e) {
+      print("Error deleting product: $e");
+    } finally {
+      isActionLoading.value = false;
+    }
+  }
 }
