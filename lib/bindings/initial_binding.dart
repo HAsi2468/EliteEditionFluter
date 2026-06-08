@@ -13,3 +13,4 @@ class InitialBindings extends Bindings {
         permanent: true);
   }
 }
+

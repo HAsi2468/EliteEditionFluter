@@ -14,6 +14,7 @@ import 'package:elite_edition/shared_widget/app_snacks.dart';
 import 'package:elite_edition/shared_widget/textfield_widget.dart';
 import 'package:elite_edition/modules/inventory/view/inventory_view.dart';
 import 'package:elite_edition/modules/inventory/controller/inventory_controller.dart';
+import 'package:elite_edition/controller/theme_controller.dart';
 
 class Homepage extends StatelessWidget {
   Homepage({super.key});
@@ -500,193 +501,241 @@ class Homepage extends StatelessWidget {
       );
 
   _showReportTypeSelection(BuildContext context, bool isDownload) {
+    final ThemeController themeController = Get.find<ThemeController>();
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColor.white,
+      backgroundColor: Colors.transparent,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  "Choose Report Type",
-                  style: TextStyle(
-                    color: AppColor.primary900,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 20),
-                ListTile(
-                  leading: Icon(Icons.analytics_outlined, color: AppColor.primary800),
-                  title: Text(
-                    "Sales Report",
+        return Obx(() {
+          final isDark = themeController.isDarkMode.value;
+          final sheetBg = isDark ? AppColor.primary800 : AppColor.white;
+          final txtColor = isDark ? AppColor.white : AppColor.primary900;
+          final iconColor = isDark ? AppColor.primary200 : AppColor.primary800;
+          final dividerColor = isDark ? AppColor.primary700 : Colors.grey.shade300;
+
+          return SafeArea(
+            child: Container(
+              decoration: BoxDecoration(
+                color: sheetBg,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    "Choose Report Type",
                     style: TextStyle(
-                      color: AppColor.primary900,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
+                      color: txtColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
                     ),
+                    textAlign: TextAlign.center,
                   ),
-                  subtitle: const Text("Standard sales report grouped by SKU"),
-                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
-                  onTap: () {
-                    Navigator.pop(context);
-                    controller.selectedReportType.value = "sales";
-                    _selectDate(context, isDownload);
-                  },
-                ),
-                const Divider(),
-                ListTile(
-                  leading: Icon(Icons.branding_watermark_outlined, color: AppColor.primary800),
-                  title: Text(
-                    "Brand Report",
-                    style: TextStyle(
-                      color: AppColor.primary900,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
+                  const SizedBox(height: 20),
+                  ListTile(
+                    leading: Icon(Icons.analytics_outlined, color: iconColor),
+                    title: Text(
+                      "Sales Report",
+                      style: TextStyle(
+                        color: txtColor,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
                     ),
+                    subtitle: Text(
+                      "Standard sales report grouped by SKU",
+                      style: TextStyle(color: isDark ? AppColor.primary300 : const Color(0xFF4B5563)),
+                    ),
+                    trailing: Icon(Icons.arrow_forward_ios_rounded, size: 16, color: iconColor),
+                    onTap: () {
+                      Navigator.pop(context);
+                      controller.selectedReportType.value = "sales";
+                      _selectDate(context, isDownload);
+                    },
                   ),
-                  subtitle: const Text("Spreadsheet-style report grouped by Brand and SKU size variations"),
-                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
-                  onTap: () {
-                    Navigator.pop(context);
-                    controller.selectedReportType.value = "brand";
-                    _selectDate(context, isDownload);
-                  },
-                ),
-                const SizedBox(height: 10),
-              ],
+                  Divider(color: dividerColor),
+                  ListTile(
+                    leading: Icon(Icons.branding_watermark_outlined, color: iconColor),
+                    title: Text(
+                      "Brand Report",
+                      style: TextStyle(
+                        color: txtColor,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
+                    ),
+                    subtitle: Text(
+                      "Spreadsheet-style report grouped by Brand and SKU size variations",
+                      style: TextStyle(color: isDark ? AppColor.primary300 : const Color(0xFF4B5563)),
+                    ),
+                    trailing: Icon(Icons.arrow_forward_ios_rounded, size: 16, color: iconColor),
+                    onTap: () {
+                      Navigator.pop(context);
+                      controller.selectedReportType.value = "brand";
+                      _selectDate(context, isDownload);
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                ],
+              ),
             ),
-          ),
-        );
+          );
+        });
       },
     );
   }
 
   _selectDate(BuildContext context, bool isDownload) {
+    final ThemeController themeController = Get.find<ThemeController>();
+    // Reset to today's date when opening
+    controller.selectStartDate = DateTime.now();
+    controller.selectEndDate = DateTime.now();
+    controller.startDateTxtController.text =
+        "${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}";
+    controller.endDateTxtController.text =
+        "${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}";
+
     return Get.dialog(
-      Dialog(
-        backgroundColor: AppColor.primary100,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 10),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                "Select Date",
-                style: TextStyle(
-                  color: AppColor.primary900,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 18,
+      Obx(() {
+        final isDark = themeController.isDarkMode.value;
+        final dialogBg = isDark ? AppColor.primary800 : AppColor.primary100;
+        final txtColor = isDark ? AppColor.white : AppColor.primary900;
+        final labelColor = isDark ? AppColor.primary200 : AppColor.primary800;
+
+        return Dialog(
+          backgroundColor: dialogBg,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 10),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  "Select Date",
+                  style: TextStyle(
+                    color: txtColor,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 18,
+                  ),
                 ),
-              ),
-              const SizedBox(
-                height: 20,
-              ),
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      children: [
-                        Text(
-                          "Start Date",
-                          style: TextStyle(
-                            color: AppColor.primary800,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 15,
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        children: [
+                          Text(
+                            "Start Date",
+                            style: TextStyle(
+                              color: labelColor,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 15,
+                            ),
                           ),
-                        ),
-                        TextFieldWidget(
-                          controller: controller.startDateTxtController,
-                          isPrefix: false,
-                          textStyleColour: AppColor.primary900,
-                          readOnly: true,
-                          onTap: () {
-                            showDatePicker(
-                              context: context,
-                              firstDate: DateTime.now().subtract(
-                                const Duration(days: 1000),
-                              ),
-                              lastDate: DateTime.now(),
-                            ).then((val) {
-                              if (val != null) {
-                                var selDate =
-                                    DateTime(val.year, val.month, val.day);
-                                controller.selectedStartDate(selDate);
-                              }
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(
-                    width: 10,
-                  ),
-                  Expanded(
-                    child: Column(
-                      children: [
-                        Text(
-                          "End Date",
-                          style: TextStyle(
-                            color: AppColor.primary800,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 15,
+                          Builder(
+                            builder: (innerContext) => TextFieldWidget(
+                              controller: controller.startDateTxtController,
+                              isPrefix: false,
+                              textStyleColour: txtColor,
+                              readOnly: true,
+                              onTap: () async {
+                                final val = await showDatePicker(
+                                  context: innerContext,
+                                  initialDate: controller.selectStartDate,
+                                  firstDate: DateTime.now().subtract(
+                                    const Duration(days: 1000),
+                                  ),
+                                  lastDate: DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day, 23, 59, 59),
+                                );
+                                if (val != null) {
+                                  final selDate = DateTime(val.year, val.month, val.day);
+                                  controller.selectedStartDate(selDate);
+                                }
+                              },
+                            ),
                           ),
-                        ),
-                        TextFieldWidget(
-                          controller: controller.endDateTxtController,
-                          isPrefix: false,
-                          textStyleColour: AppColor.primary900,
-                          readOnly: true,
-                          onTap: () {
-                            showDatePicker(
-                              context: context,
-                              firstDate: DateTime.now().subtract(
-                                const Duration(days: 1000),
-                              ),
-                              lastDate: DateTime.now(),
-                            ).then((val) {
-                              if (val != null) {
-                                var selDate =
-                                    DateTime(val.year, val.month, val.day);
-                                controller.selectedEndDate(selDate);
-                              }
-                            });
-                          },
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(
-                height: 20,
-              ),
-              Row(
-                children: [
-                  Expanded(
-                    child: AppButton(
-                      onPressed: () {
-                        _reportSave(isDownload);
-                      },
-                      text: "Save",
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        children: [
+                          Text(
+                            "End Date",
+                            style: TextStyle(
+                              color: labelColor,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 15,
+                            ),
+                          ),
+                          Builder(
+                            builder: (innerContext) => TextFieldWidget(
+                              controller: controller.endDateTxtController,
+                              isPrefix: false,
+                              textStyleColour: txtColor,
+                              readOnly: true,
+                              onTap: () async {
+                                final val = await showDatePicker(
+                                  context: innerContext,
+                                  initialDate: controller.selectEndDate,
+                                  firstDate: DateTime.now().subtract(
+                                    const Duration(days: 1000),
+                                  ),
+                                  lastDate: DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day, 23, 59, 59),
+                                );
+                                if (val != null) {
+                                  final selDate = DateTime(val.year, val.month, val.day);
+                                  controller.selectedEndDate(selDate);
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: txtColor,
+                          side: BorderSide(color: txtColor),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        onPressed: () => Get.back(),
+                        child: const Text("Cancel", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: AppButton(
+                        onPressed: () {
+                          _reportSave(isDownload);
+                        },
+                        bgColor: isDark ? AppColor.primary900 : AppColor.primary800,
+                        textColor: AppColor.white,
+                        text: "Save",
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
-      ),
+        );
+      }),
     );
   }
 
@@ -709,43 +758,47 @@ class Homepage extends StatelessWidget {
   }
 
   _filterOnTap(BuildContext context, Size size) async {
+    final ThemeController themeController = Get.find<ThemeController>();
     Get.bottomSheet(
-      Container(
-        height: size.height / 1.2,
-        decoration: BoxDecoration(
-          color: AppColor.white,
-          borderRadius: const BorderRadius.only(
-            topRight: Radius.circular(30),
-            topLeft: Radius.circular(30),
+      Obx(() {
+        final isDark = themeController.isDarkMode.value;
+        final sheetBg = isDark ? AppColor.primary800 : AppColor.white;
+        final dividerColor = isDark ? AppColor.primary700 : AppColor.black;
+        final handleColor = isDark ? AppColor.primary300 : AppColor.primary900;
+        final activeFilterBg = isDark ? AppColor.primary900 : AppColor.white;
+        final inactiveFilterBg = isDark ? AppColor.primary800 : const Color(0xFFF3F4F6);
+        final textColor = isDark ? AppColor.white : AppColor.primary900;
+
+        return Container(
+          height: size.height / 1.2,
+          decoration: BoxDecoration(
+            color: sheetBg,
+            borderRadius: const BorderRadius.only(
+              topRight: Radius.circular(30),
+              topLeft: Radius.circular(30),
+            ),
           ),
-        ),
-        child: Obx(
-          () => controller.isFilterLoading.value
+          child: controller.isFilterLoading.value
               ? const Center(
                   child: CircularProgressIndicator(),
                 )
               : Column(
                   children: [
-                    const SizedBox(
-                      height: 10,
-                    ),
+                    const SizedBox(height: 10),
                     Container(
                       width: 80,
                       height: 5,
                       decoration: BoxDecoration(
-                        color: AppColor.primary900,
+                        color: handleColor,
                         borderRadius: BorderRadius.circular(20),
                       ),
                     ),
-                    const SizedBox(
-                      height: 20,
-                    ),
+                    const SizedBox(height: 20),
                     Container(
                       width: size.width,
                       height: 1,
                       decoration: BoxDecoration(
-                        color: AppColor.black,
-                        // borderRadius: BorderRadius.circular(20),
+                        color: dividerColor,
                       ),
                     ),
                     Expanded(
@@ -756,8 +809,6 @@ class Homepage extends StatelessWidget {
                             flex: 2,
                             child: ListView.builder(
                               itemCount: controller.filterDataList.length,
-                              // physics:
-                              //     const NeverScrollableScrollPhysics(),
                               shrinkWrap: true,
                               padding: const EdgeInsets.symmetric(vertical: 0),
                               itemBuilder: (context, index) {
@@ -766,35 +817,28 @@ class Homepage extends StatelessWidget {
                                   onTap: () => controller.selectFilter(data),
                                   child: Container(
                                     decoration: BoxDecoration(
-                                      color: controller.selectedFilter.value ==
-                                              null
-                                          ? AppColor.white
-                                          : controller.selectedFilter.value
-                                                      ?.name ==
-                                                  data.name
-                                              ? AppColor.primary200
-                                              : AppColor.white,
+                                      color: controller.selectedFilter.value == null
+                                          ? activeFilterBg
+                                          : controller.selectedFilter.value?.name == data.name
+                                              ? (isDark ? AppColor.primary900 : AppColor.primary200)
+                                              : inactiveFilterBg,
                                     ),
-                                    // padding: EdgeInsets.symmetric(vertical: 5),
                                     child: Column(
                                       children: [
-                                        const SizedBox(
-                                          height: 5,
-                                        ),
+                                        const SizedBox(height: 5),
                                         Text(
                                           data.name,
                                           style: TextStyle(
-                                            color: AppColor.primary900,
+                                            color: textColor,
                                             fontSize: 17,
                                             fontWeight: FontWeight.w500,
                                           ),
                                         ),
-                                        const SizedBox(
-                                          height: 5,
-                                        ),
-                                        const Divider(
+                                        const SizedBox(height: 5),
+                                        Divider(
                                           height: 1,
                                           thickness: 1,
+                                          color: dividerColor,
                                         ),
                                       ],
                                     ),
@@ -804,25 +848,23 @@ class Homepage extends StatelessWidget {
                             ),
                           ),
                           VerticalDivider(
-                            color: AppColor.black,
+                            color: dividerColor,
                             width: 1,
                           ),
                           Expanded(
                             flex: 4,
                             child: Padding(
-                              padding: const EdgeInsets.only(
-                                  top: 10, left: 5, right: 3),
-                              child: controller.selectedFilter.value?.name
-                                          .toLowerCase() ==
-                                      "cities"
+                              padding: const EdgeInsets.only(top: 10, left: 5, right: 3),
+                              child: controller.selectedFilter.value?.name.toLowerCase() == "cities"
                                   ? ListView.builder(
-                                      itemCount: controller
-                                          .selectedFilter.value!.values.length,
+                                      itemCount: controller.selectedFilter.value!.values.length,
                                       itemBuilder: (context, i) {
-                                        var res = controller
-                                            .selectedFilter.value!.values[i];
+                                        var res = controller.selectedFilter.value!.values[i];
                                         return ExpansionTile(
-                                          title: Text("${res['state']}"),
+                                          title: Text(
+                                            "${res['state']}",
+                                            style: TextStyle(color: textColor),
+                                          ),
                                           children: [
                                             Wrap(
                                               spacing: 10,
@@ -831,30 +873,18 @@ class Homepage extends StatelessWidget {
                                                 (e) => Obx(
                                                   () => FilterChip(
                                                     label: Text(
-                                                        "${res['cities'][e]}"),
-                                                    backgroundColor:
-                                                        AppColor.white,
-                                                    padding:
-                                                        const EdgeInsets.all(5),
-                                                    selectedColor:
-                                                        AppColor.primary300,
-                                                    selected: controller
-                                                        .selectCity
-                                                        .contains(
-                                                            res['cities'][e]),
+                                                      "${res['cities'][e]}",
+                                                      style: TextStyle(color: textColor),
+                                                    ),
+                                                    backgroundColor: activeFilterBg,
+                                                    padding: const EdgeInsets.all(5),
+                                                    selectedColor: isDark ? AppColor.primary700 : AppColor.primary300,
+                                                    selected: controller.selectCity.contains(res['cities'][e]),
                                                     onSelected: (val) {
-                                                      if (controller.selectCity
-                                                          .contains(
-                                                              res['cities']
-                                                                  [e])) {
-                                                        controller.selectCity
-                                                            .remove(
-                                                                res['cities']
-                                                                    [e]);
+                                                      if (controller.selectCity.contains(res['cities'][e])) {
+                                                        controller.selectCity.remove(res['cities'][e]);
                                                       } else {
-                                                        controller.selectCity
-                                                            .add(res['cities']
-                                                                [e]);
+                                                        controller.selectCity.add(res['cities'][e]);
                                                       }
                                                     },
                                                   ),
@@ -863,133 +893,42 @@ class Homepage extends StatelessWidget {
                                             ),
                                           ],
                                         );
-                                      })
-                                  : controller.selectedFilter.value?.name
-                                              .toLowerCase() ==
-                                          "date"
-                                      // ? Column(
-                                      //     crossAxisAlignment:
-                                      //         CrossAxisAlignment.start,
-                                      //     children: [
-                                      //       /*Expanded(
-                                      //         child: DateRangePickerDialog(
-                                      //           firstDate:
-                                      //               DateTime.now().subtract(
-                                      //             const Duration(days: 1000),
-                                      //           ),
-                                      //           lastDate: DateTime.now(),
-                                      //           initialEntryMode: DatePickerEntryMode.calendarOnly,
-                                      //         ),
-                                      //       ),*/
-                                      //       // Text(
-                                      //       //   "Start Date",
-                                      //       //   style: TextStyle(
-                                      //       //     color: AppColor.primary800,
-                                      //       //     fontWeight: FontWeight.w600,
-                                      //       //     fontSize: 17,
-                                      //       //   ),
-                                      //       // ),
-                                      //       // SizedBox(height: 5,),
-                                      //       // TextFieldWidget(
-                                      //       //   controller: controller
-                                      //       //       .filterStartDateTxtController,
-                                      //       //   isPrefix: false,
-                                      //       //   textStyleColour:
-                                      //       //       AppColor.primary900,
-                                      //       //   readOnly: true,
-                                      //       //   onTap: () {
-                                      //       //     showDatePicker(
-                                      //       //       context: context,
-                                      //       //       firstDate:
-                                      //       //           DateTime.now().subtract(
-                                      //       //         const Duration(days: 1000),
-                                      //       //       ),
-                                      //       //       lastDate: DateTime.now(),
-                                      //       //     ).then((val) {
-                                      //       //       if (val != null) {
-                                      //       //         var selDate = DateTime(
-                                      //       //             val.year,
-                                      //       //             val.month,
-                                      //       //             val.day);
-                                      //       //         controller
-                                      //       //             .selectedFilterStartDate(
-                                      //       //                 selDate);
-                                      //       //       }
-                                      //       //     });
-                                      //       //   },
-                                      //       // ),
-                                      //       // SizedBox(
-                                      //       //   height: 20,
-                                      //       // ),
-                                      //       // Text(
-                                      //       //   "End Date",
-                                      //       //   style: TextStyle(
-                                      //       //     color: AppColor.primary800,
-                                      //       //     fontWeight: FontWeight.w600,
-                                      //       //     fontSize: 17,
-                                      //       //   ),
-                                      //       // ),
-                                      //       // SizedBox(height: 5,),
-                                      //       // TextFieldWidget(
-                                      //       //   controller: controller
-                                      //       //       .filterEndDateTxtController,
-                                      //       //   isPrefix: false,
-                                      //       //   textStyleColour:
-                                      //       //       AppColor.primary900,
-                                      //       //   readOnly: true,
-                                      //       //   onTap: () {
-                                      //       //     showDatePicker(
-                                      //       //       context: context,
-                                      //       //       firstDate:
-                                      //       //           DateTime.now().subtract(
-                                      //       //         const Duration(days: 1000),
-                                      //       //       ),
-                                      //       //       lastDate: DateTime.now(),
-                                      //       //     ).then((val) {
-                                      //       //       if (val != null) {
-                                      //       //         var selDate = DateTime(
-                                      //       //             val.year,
-                                      //       //             val.month,
-                                      //       //             val.day);
-                                      //       //         controller.selectedFilterEndDate(
-                                      //       //             selDate);
-                                      //       //       }
-                                      //       //     });
-                                      //       //   },
-                                      //       // ),
-                                      //     ],
-                                      //   )
+                                      },
+                                    )
+                                  : controller.selectedFilter.value?.name.toLowerCase() == "date"
                                       ? CrossScroll(
                                           child: Column(
                                             children: [
                                               DateRangePickerWidget(
                                                 onDateRangeChanged: (val) {
-                                                  print(
-                                                      "Select date <><> $val");
+                                                  print("Select date <><> $val");
                                                   if (val != null) {
-                                                    controller
-                                                        .selectedFilterStartDate(
-                                                            val.start);
-                                                    controller
-                                                        .selectedFilterEndDate(
-                                                            val.end);
+                                                    controller.selectedFilterStartDate(val.start);
+                                                    controller.selectedFilterEndDate(val.end);
                                                   }
                                                 },
-                                                allowSingleTapDaySelection:
-                                                    true,
+                                                allowSingleTapDaySelection: true,
                                                 doubleMonth: false,
                                                 maxDate: DateTime.now(),
                                                 minDate: DateTime(1950),
                                                 height: 340,
+                                                theme: CalendarTheme(
+                                                  selectedColor: isDark ? AppColor.primary300 : AppColor.primary900,
+                                                  inRangeColor: isDark ? AppColor.primary700 : AppColor.primary100,
+                                                  inRangeTextStyle: TextStyle(color: isDark ? AppColor.white : AppColor.primary900),
+                                                  selectedTextStyle: TextStyle(color: isDark ? AppColor.primary900 : Colors.white),
+                                                  todayTextStyle: TextStyle(fontWeight: FontWeight.bold, color: isDark ? AppColor.primary300 : AppColor.primary900),
+                                                  defaultTextStyle: TextStyle(color: textColor, fontSize: 12),
+                                                  disabledTextStyle: const TextStyle(color: Colors.grey),
+                                                  radius: 10,
+                                                  tileSize: 40,
+                                                  dayNameTextStyle: TextStyle(color: isDark ? Colors.white70 : Colors.black45, fontSize: 10),
+                                                  monthTextStyle: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 16),
+                                                ),
                                                 initialDateRange: DateRange(
-                                                    controller
-                                                            .selectFilterStartDate ??
-                                                        DateTime.now(),
-                                                    controller
-                                                            .selectFilterEndDate ??
-                                                        DateTime.now()),
-                                                initialDisplayedDate:
-                                                    DateTime.now(),
+                                                    controller.selectFilterStartDate ?? DateTime.now(),
+                                                    controller.selectFilterEndDate ?? DateTime.now()),
+                                                initialDisplayedDate: DateTime.now(),
                                               ),
                                             ],
                                           ),
@@ -997,118 +936,64 @@ class Homepage extends StatelessWidget {
                                       : Wrap(
                                           spacing: 10,
                                           children: List.generate(
-                                              controller.selectedFilter.value!
-                                                  .values.length, (i) {
-                                            var e = controller.selectedFilter
-                                                .value!.values[i];
-                                            return FilterChip(
-                                              label: Text("$e"),
-                                              backgroundColor: AppColor.white,
-                                              padding: const EdgeInsets.all(5),
-                                              selectedColor:
-                                                  AppColor.primary300,
-                                              selected: controller
-                                                          .selectedFilter
-                                                          .value!
-                                                          .name
-                                                          .toLowerCase() ==
-                                                      "category"
-                                                  ? controller.selectCategory
-                                                      .contains(e)
-                                                  : controller.selectedFilter
-                                                              .value!.name
-                                                              .toLowerCase() ==
-                                                          "colors"
-                                                      ? controller.selectColor
-                                                          .contains(e)
-                                                      : controller.selectedFilter
-                                                                  .value!.name
-                                                                  .toLowerCase() ==
-                                                              "order status"
-                                                          ? controller
-                                                              .selectStatus
-                                                              .contains(e)
-                                                          : controller
-                                                                      .selectedFilter
-                                                                      .value!
-                                                                      .name
-                                                                      .toLowerCase() ==
-                                                                  "brands"
-                                                              ? controller.selectBrand.contains(e)
-                                                              : controller.selectSize.contains(e),
-                                              onSelected: (val) {
-                                                if (controller.selectedFilter
-                                                        .value!.name
-                                                        .toLowerCase() ==
-                                                    "category") {
-                                                  if (controller.selectCategory
-                                                      .contains(e)) {
-                                                    controller.selectCategory
-                                                        .remove(e);
-                                                  } else {
-                                                    controller.selectCategory
-                                                        .add(e);
-                                                  }
-                                                } else if (controller
-                                                        .selectedFilter
-                                                        .value!
-                                                        .name
-                                                        .toLowerCase() ==
-                                                    "colors") {
-                                                  if (controller.selectColor
-                                                      .contains(e)) {
-                                                    controller.selectColor
-                                                        .remove(e);
-                                                  } else {
-                                                    controller.selectColor
-                                                        .add(e);
-                                                  }
-                                                } else if (controller
-                                                        .selectedFilter
-                                                        .value!
-                                                        .name
-                                                        .toLowerCase() ==
-                                                    "brands") {
-                                                  if (controller.selectBrand
-                                                      .contains(e)) {
-                                                    controller.selectBrand
-                                                        .remove(e);
-                                                  } else {
-                                                    controller.selectBrand
-                                                        .add(e);
-                                                  }
-                                                } else if (controller
-                                                        .selectedFilter
-                                                        .value!
-                                                        .name
-                                                        .toLowerCase() ==
-                                                    "order status") {
-                                                  if (controller.selectStatus
-                                                      .contains(e)) {
-                                                    controller.selectStatus
-                                                        .remove(e);
-                                                  } else {
-                                                    controller.selectStatus
-                                                        .add(e);
-                                                  }
-                                                } else if (controller
-                                                        .selectedFilter
-                                                        .value!
-                                                        .name
-                                                        .toLowerCase() ==
-                                                    "sizes") {
-                                                  if (controller.selectSize
-                                                      .contains(e)) {
-                                                    controller.selectSize
-                                                        .remove(e);
-                                                  } else {
-                                                    controller.selectSize
-                                                        .add(e);
-                                                  }
-                                                }
-                                              },
-                                            );
-                                          }),
+                                            controller.selectedFilter.value!.values.length,
+                                            (i) {
+                                              var e = controller.selectedFilter.value!.values[i];
+                                              return Obx(
+                                                () => FilterChip(
+                                                  label: Text(
+                                                    "$e",
+                                                    style: TextStyle(color: textColor),
+                                                  ),
+                                                  backgroundColor: activeFilterBg,
+                                                  padding: const EdgeInsets.all(5),
+                                                  selectedColor: isDark ? AppColor.primary700 : AppColor.primary300,
+                                                  selected: controller.selectedFilter.value!.name.toLowerCase() == "category"
+                                                      ? controller.selectCategory.contains(e)
+                                                      : controller.selectedFilter.value!.name.toLowerCase() == "colors"
+                                                          ? controller.selectColor.contains(e)
+                                                          : controller.selectedFilter.value!.name.toLowerCase() == "order status"
+                                                              ? controller.selectStatus.contains(e)
+                                                              : controller.selectedFilter.value!.name.toLowerCase() == "brands"
+                                                                  ? controller.selectBrand.contains(e)
+                                                                  : controller.selectSize.contains(e),
+                                                  onSelected: (val) {
+                                                    if (controller.selectedFilter.value!.name.toLowerCase() == "category") {
+                                                      if (controller.selectCategory.contains(e)) {
+                                                        controller.selectCategory.remove(e);
+                                                      } else {
+                                                        controller.selectCategory.add(e);
+                                                      }
+                                                    } else if (controller.selectedFilter.value!.name.toLowerCase() == "colors") {
+                                                      if (controller.selectColor.contains(e)) {
+                                                        controller.selectColor.remove(e);
+                                                      } else {
+                                                        controller.selectColor.add(e);
+                                                      }
+                                                    } else if (controller.selectedFilter.value!.name.toLowerCase() == "brands") {
+                                                      if (controller.selectBrand.contains(e)) {
+                                                        controller.selectBrand.remove(e);
+                                                      } else {
+                                                        controller.selectBrand.add(e);
+                                                      }
+                                                    } else if (controller.selectedFilter.value!.name.toLowerCase() == "order status") {
+                                                      if (controller.selectStatus.contains(e)) {
+                                                        controller.selectStatus.remove(e);
+                                                      } else {
+                                                        controller.selectStatus.add(e);
+                                                      }
+                                                    } else if (controller.selectedFilter.value!.name.toLowerCase() == "sizes") {
+                                                      if (controller.selectSize.contains(e)) {
+                                                        controller.selectSize.remove(e);
+                                                      } else {
+                                                        controller.selectSize.add(e);
+                                                      }
+                                                    }
+                                                  },
+                                                ),
+                                              );
+                                            },
+                                          ),
                                         ),
                             ),
                           ),
@@ -1117,13 +1002,12 @@ class Homepage extends StatelessWidget {
                     ),
                     Container(
                       decoration: BoxDecoration(
-                        color: AppColor.white,
-                        border: const Border(
-                          top: BorderSide(),
+                        color: activeFilterBg,
+                        border: Border(
+                          top: BorderSide(color: dividerColor),
                         ),
                       ),
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 5, horizontal: 10),
+                      padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
                       child: Row(
                         children: [
                           Expanded(
@@ -1141,14 +1025,12 @@ class Homepage extends StatelessWidget {
                                       controller.clearFilter();
                                     },
                               style: TextButton.styleFrom(
-                                foregroundColor: AppColor.primary900,
+                                foregroundColor: textColor,
                               ),
                               child: const Text("Clear All"),
                             ),
                           ),
-                          const SizedBox(
-                            width: 10,
-                          ),
+                          const SizedBox(width: 10),
                           Expanded(
                             child: AppButton(
                               onPressed: controller.selectCategory.isEmpty &&
@@ -1163,6 +1045,8 @@ class Homepage extends StatelessWidget {
                                       Get.back();
                                       controller.applyFilter();
                                     },
+                              bgColor: isDark ? AppColor.primary900 : AppColor.primary800,
+                              textColor: AppColor.white,
                               text: "Apply",
                             ),
                           ),
@@ -1171,50 +1055,67 @@ class Homepage extends StatelessWidget {
                     ),
                   ],
                 ),
-        ),
-      ),
+        );
+      }),
       isScrollControlled: true,
       isDismissible: false,
     );
   }
 
   _sortOnTap() {
+    final ThemeController themeController = Get.find<ThemeController>();
     Get.bottomSheet(
-      Container(
-        decoration: BoxDecoration(
-          color: AppColor.white,
-          borderRadius: const BorderRadius.only(
-            topRight: Radius.circular(30),
-            topLeft: Radius.circular(30),
+      Obx(() {
+        final isDark = themeController.isDarkMode.value;
+        final sheetBg = isDark ? AppColor.primary800 : AppColor.white;
+        final textColor = isDark ? AppColor.white : AppColor.primary900;
+        final dividerColor = isDark ? AppColor.primary700 : Colors.grey.shade300;
+
+        return Container(
+          decoration: BoxDecoration(
+            color: sheetBg,
+            borderRadius: const BorderRadius.only(
+              topRight: Radius.circular(30),
+              topLeft: Radius.circular(30),
+            ),
           ),
-        ),
-        child: ListView.separated(
-          itemBuilder: (context, index) {
-            var data = controller.sortList[index];
-            return Obx(
-              () => RadioListTile(
-                value: data,
-                groupValue: controller.selectedSort.value,
-                onChanged: (val) {
-                  controller.selectedSort.value = val.toString();
-                  print("VALUE <> $val ||| ${controller.selectedSort.value}");
-                  Get.back();
-                  if (controller.selectedSort.value.toLowerCase() != "none") {
-                    controller.applySort();
-                  } else {
-                    controller.clearSort();
-                  }
-                },
-                title: Text(data),
-              ),
-            );
-          },
-          separatorBuilder: (context, index) => const Divider(),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
-          itemCount: controller.sortList.length,
-          shrinkWrap: true,
-        ),
-      ),
+          child: ListView.separated(
+            itemBuilder: (context, index) {
+              var data = controller.sortList[index];
+              return Obx(
+                () => Theme(
+                  data: Theme.of(context).copyWith(
+                    unselectedWidgetColor: isDark ? AppColor.primary300 : AppColor.primary600,
+                  ),
+                  child: RadioListTile(
+                    value: data,
+                    groupValue: controller.selectedSort.value,
+                    activeColor: isDark ? AppColor.primary300 : AppColor.primary900,
+                    onChanged: (val) {
+                      controller.selectedSort.value = val.toString();
+                      print("VALUE <> $val ||| ${controller.selectedSort.value}");
+                      Get.back();
+                      if (controller.selectedSort.value.toLowerCase() != "none") {
+                        controller.applySort();
+                      } else {
+                        controller.clearSort();
+                      }
+                    },
+                    title: Text(
+                      data,
+                      style: TextStyle(color: textColor, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+              );
+            },
+            separatorBuilder: (context, index) => Divider(color: dividerColor),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
+            itemCount: controller.sortList.length,
+            shrinkWrap: true,
+          ),
+        );
+      }),
       isScrollControlled: false,
     );
   }

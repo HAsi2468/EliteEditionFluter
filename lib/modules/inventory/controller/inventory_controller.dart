@@ -5,6 +5,8 @@ import 'package:elite_edition/modules/inventory/model/inventory_item_model.dart'
 import 'package:elite_edition/modules/inventory/model/party_model.dart';
 import 'package:elite_edition/shared_widget/app_snacks.dart';
 
+import 'package:elite_edition/controller/theme_controller.dart';
+
 class InventoryController extends GetxController {
   final ApiRepository apiRepository;
 
@@ -14,12 +16,39 @@ class InventoryController extends GetxController {
   RxList<InventoryItemModel> inventoryList = RxList();
   RxString searchQuery = "".obs;
 
-  RxBool isDarkMode = true.obs;
+  RxBool get isDarkMode => Get.find<ThemeController>().isDarkMode;
   RxBool isActionLoading = false.obs;
   RxBool isEditMode = false.obs;
+  RxList<Map<String, dynamic>> stagedItems = RxList();
+
+  /// Groups inventoryList by skuCode, summing stock across all parties.
+  /// Returns a list of maps with keys:
+  ///   skuCode, itemName, imageUrl, totalStock, totalQty, entries (List<InventoryItemModel>)
+  List<Map<String, dynamic>> get groupedBySku {
+    final Map<String, Map<String, dynamic>> grouped = {};
+    for (final item in inventoryList) {
+      final key = item.skuCode.isNotEmpty ? item.skuCode : item.itemName;
+      if (!grouped.containsKey(key)) {
+        grouped[key] = {
+          'skuCode': item.skuCode,
+          'itemName': item.itemName,
+          'imageUrl': item.imageUrl,
+          'totalStock': 0,
+          'totalQty': 0,
+          'entries': <InventoryItemModel>[],
+        };
+      }
+      grouped[key]!['totalStock'] =
+          (grouped[key]!['totalStock'] as int) + item.currentlyAvailableStock;
+      grouped[key]!['totalQty'] =
+          (grouped[key]!['totalQty'] as int) + item.qty;
+      (grouped[key]!['entries'] as List<InventoryItemModel>).add(item);
+    }
+    return grouped.values.toList();
+  }
 
   void toggleTheme() {
-    isDarkMode.value = !isDarkMode.value;
+    Get.find<ThemeController>().toggleTheme();
   }
 
   // Catalog list options
@@ -32,6 +61,7 @@ class InventoryController extends GetxController {
   RxString selectedSkuCode = "".obs;
   RxString selectedImageUrl = "".obs;
   RxString selectedSize = "".obs;
+  Rx<DateTime> selectedDate = DateTime.now().obs;
 
   // Form controllers
   final TextEditingController itemNameController = TextEditingController();
@@ -86,11 +116,13 @@ class InventoryController extends GetxController {
 
   void clearForm() {
     isEditMode.value = false;
+    stagedItems.clear();
     selectedParty.value = "";
     selectedSkuCode.value = "";
     selectedImageUrl.value = "";
     selectedSize.value = "";
     sizeOptionsList.clear();
+    selectedDate.value = DateTime.now();
     
     itemNameController.clear();
     stockController.clear();
@@ -109,6 +141,7 @@ class InventoryController extends GetxController {
     salePriceController.text = item.salePrice.toString();
     purchasePriceController.text = item.purchasePrice.toString();
     qtyController.text = item.qty.toString();
+    selectedDate.value = item.date != null ? DateTime.parse(item.date!) : (item.createdDateTime != null ? DateTime.parse(item.createdDateTime!) : DateTime.now());
 
     // Populate sizes list based on product SKU if found
     sizeOptionsList.clear();
@@ -227,12 +260,12 @@ class InventoryController extends GetxController {
     }
   }
 
-  Future<void> addInventoryItem() async {
+  Future<bool> addInventoryItem() async {
     if (selectedParty.value.trim().isEmpty ||
         itemNameController.text.trim().isEmpty ||
         selectedSize.value.trim().isEmpty) {
       AppSnacks.errorSnack(message: "Party, Item Name, and Size are required.");
-      return;
+      return false;
     }
 
     try {
@@ -248,6 +281,7 @@ class InventoryController extends GetxController {
         "qty": int.tryParse(qtyController.text.trim()) ?? 0,
         "imageUrl": selectedImageUrl.value,
         "skuCode": selectedSkuCode.value,
+        "date": selectedDate.value.toIso8601String(),
       };
 
       var res = await apiRepository.createInventory(body);
@@ -255,22 +289,23 @@ class InventoryController extends GetxController {
       if (res != false) {
         AppSnacks.successSnack(message: "Inventory item added successfully.");
         clearForm();
-        Get.back(); // Pop add dialog
         fetchInventory();
+        return true;
       }
     } catch (e) {
       print("Error adding inventory item: $e");
     } finally {
       isActionLoading.value = false;
     }
+    return false;
   }
 
-  Future<void> updateInventoryItem(String id) async {
+  Future<bool> updateInventoryItem(String id) async {
     if (selectedParty.value.trim().isEmpty ||
         itemNameController.text.trim().isEmpty ||
         selectedSize.value.trim().isEmpty) {
       AppSnacks.errorSnack(message: "Party, Item Name, and Size are required.");
-      return;
+      return false;
     }
 
     try {
@@ -286,6 +321,7 @@ class InventoryController extends GetxController {
         "qty": int.tryParse(qtyController.text.trim()) ?? 0,
         "imageUrl": selectedImageUrl.value,
         "skuCode": selectedSkuCode.value,
+        "date": selectedDate.value.toIso8601String(),
       };
 
       var res = await apiRepository.updateInventory(id, body);
@@ -293,14 +329,15 @@ class InventoryController extends GetxController {
       if (res != false) {
         AppSnacks.successSnack(message: "Inventory item updated successfully.");
         clearForm();
-        Get.back(); // Pop edit dialog
         fetchInventory();
+        return true;
       }
     } catch (e) {
       print("Error updating inventory item: $e");
     } finally {
       isActionLoading.value = false;
     }
+    return false;
   }
 
   Future<void> deleteInventoryItem(String id) async {
@@ -487,5 +524,65 @@ class InventoryController extends GetxController {
     } finally {
       isActionLoading.value = false;
     }
+  }
+
+  void stageCurrentItem() {
+    if (selectedParty.value.trim().isEmpty ||
+        itemNameController.text.trim().isEmpty ||
+        selectedSize.value.trim().isEmpty) {
+      AppSnacks.errorSnack(message: "Party, Item Name, and Size are required to stage.");
+      return;
+    }
+
+    final item = {
+      "party": selectedParty.value.trim(),
+      "itemName": itemNameController.text.trim(),
+      "size": selectedSize.value.trim(),
+      "currentlyAvailableStock": int.tryParse(stockController.text.trim()) ?? 0,
+      "salePrice": double.tryParse(salePriceController.text.trim()) ?? 0.0,
+      "purchasePrice": double.tryParse(purchasePriceController.text.trim()) ?? 0.0,
+      "qty": int.tryParse(qtyController.text.trim()) ?? 0,
+      "imageUrl": selectedImageUrl.value,
+      "skuCode": selectedSkuCode.value,
+      "date": selectedDate.value.toIso8601String(),
+    };
+
+    stagedItems.add(item);
+    
+    // Clear item inputs but preserve party/vendor selection for faster entry
+    selectedSkuCode.value = "";
+    selectedImageUrl.value = "";
+    selectedSize.value = "";
+    sizeOptionsList.clear();
+    
+    itemNameController.clear();
+    stockController.clear();
+    salePriceController.clear();
+    purchasePriceController.clear();
+    qtyController.clear();
+
+    AppSnacks.successSnack(message: "Item staged. You can add more.");
+  }
+
+  Future<bool> addStagedInventoryItems() async {
+    if (stagedItems.isEmpty) return false;
+
+    try {
+      isActionLoading.value = true;
+      
+      var res = await apiRepository.createInventory(List<Map<String, dynamic>>.from(stagedItems));
+
+      if (res != false) {
+        AppSnacks.successSnack(message: "All staged inventory items added successfully.");
+        clearForm();
+        fetchInventory();
+        return true;
+      }
+    } catch (e) {
+      print("Error adding staged inventory items: $e");
+    } finally {
+      isActionLoading.value = false;
+    }
+    return false;
   }
 }

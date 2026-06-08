@@ -9,6 +9,7 @@ class InventoryItemModel {
   final int qty;
   final String imageUrl;
   final String skuCode;
+  final String? date;
   final String? createdDateTime;
   final String? modifiedDateTime;
 
@@ -23,6 +24,7 @@ class InventoryItemModel {
     required this.qty,
     required this.imageUrl,
     required this.skuCode,
+    this.date,
     this.createdDateTime,
     this.modifiedDateTime,
   });
@@ -38,6 +40,7 @@ class InventoryItemModel {
         qty: json["qty"] ?? 0,
         imageUrl: json["imageUrl"] ?? "",
         skuCode: json["skuCode"] ?? "",
+        date: json["date"],
         createdDateTime: json["created_date_time"],
         modifiedDateTime: json["modified_date_time"],
       );
@@ -52,5 +55,6 @@ class InventoryItemModel {
         "qty": qty,
         "imageUrl": imageUrl,
         "skuCode": skuCode,
+        "date": date,
       };
 }

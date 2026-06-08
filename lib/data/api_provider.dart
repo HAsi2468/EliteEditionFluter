@@ -26,13 +26,16 @@ class ApiProvider extends GetxService {
     }
   }
 
-  Future<dynamic> post(String endpoint, Map body,
+  Future<dynamic> post(String endpoint, dynamic body,
       {Map<String, String>? headers}) async {
     print("API CALL $endpoint => $body");
     final response = await http.post(
       Uri.parse('${ApiUrl.baseUrl}/$endpoint'),
-      // headers: headers,
-      body: body,
+      headers: {
+        'Content-Type': 'application/json',
+        ...?headers,
+      },
+      body: json.encode(body),
     );
     print("${ApiUrl.baseUrl}/$endpoint RESPONSE BODY ${response.statusCode} ===> ${response.body}");
     var result = json.decode(response.body);
@@ -49,7 +52,11 @@ class ApiProvider extends GetxService {
     print("API CALL PUT $endpoint => $body");
     final response = await http.put(
       Uri.parse('${ApiUrl.baseUrl}/$endpoint'),
-      body: body,
+      headers: {
+        'Content-Type': 'application/json',
+        ...?headers,
+      },
+      body: json.encode(body),
     );
     print("${ApiUrl.baseUrl}/$endpoint RESPONSE BODY ${response.statusCode} ===> ${response.body}");
     var result = json.decode(response.body);

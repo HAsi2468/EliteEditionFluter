@@ -62,7 +62,7 @@ class ApiRepository extends GetxService {
     return res;
   }
 
-  Future<dynamic> createInventory(Map<String, dynamic> body) async {
+  Future<dynamic> createInventory(dynamic body) async {
     var res = await apiProvider.post(ApiUrl.inventory, body);
     return res;
   }

@@ -7,12 +7,14 @@ class AppAssetImage extends StatelessWidget {
     this.height,
     this.width,
     this.fit,
+    this.imgColor,
   });
 
   final String image;
   final double? height;
   final double? width;
   final BoxFit? fit;
+  final Color? imgColor;
 
   @override
   Widget build(BuildContext context) {
@@ -21,6 +23,8 @@ class AppAssetImage extends StatelessWidget {
       height: height,
       width: width,
       fit: fit,
+      color: imgColor,
     );
   }
 }
+
