@@ -9,7 +9,7 @@ class AppPdfView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('PDF Viewer'),),
+      appBar: AppBar(title: const Text('PDF Viewer'),),
       body: PDFView(
         filePath: path,
         enableSwipe: true,

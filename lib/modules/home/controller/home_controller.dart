@@ -1,8 +1,5 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:get/get.dart';
-import 'package:get/state_manager.dart';
 import 'package:elite_edition/constants/app_color.dart';
 import 'package:elite_edition/data/api_repository.dart';
 import 'package:elite_edition/model/filter_datamodel.dart';
@@ -81,7 +78,7 @@ class HomeController extends GetxService {
 
   selectFilter(Filter filter) {
     selectedFilter.value = filter;
-    print("Selected filter >>> ${filter.name}");
+    debugPrint("Selected filter >>> ${filter.name}");
   }
 
   selectedStartDate(DateTime date) {
@@ -98,7 +95,7 @@ class HomeController extends GetxService {
 
   selectedFilterStartDate(DateTime date) {
     selectFilterStartDate = date;
-    print("selectFilterStartDate --- $selectFilterStartDate");
+    debugPrint("selectFilterStartDate --- $selectFilterStartDate");
     isFilterDateSelected.value = true;
     // startDateTxtController.text =
     //     "${selectFilterStartDate.day}/${selectFilterStartDate.month}/${selectFilterStartDate.year}";
@@ -106,7 +103,7 @@ class HomeController extends GetxService {
 
   selectedFilterEndDate(DateTime date) {
     selectFilterEndDate = date;
-    print("selectFilterEndDate --- $selectFilterEndDate");
+    debugPrint("selectFilterEndDate --- $selectFilterEndDate");
     isFilterDateSelected.value = true;
     // endDateTxtController.text =
     //     "${selectFilterEndDate.day}/${selectFilterEndDate.month}/${selectFilterEndDate.year}";
@@ -171,7 +168,7 @@ class HomeController extends GetxService {
             'brand': brand,
           };
         } catch (e) {
-          print("Error enriching SKU $sku: $e");
+          debugPrint("Error enriching SKU $sku: $e");
         }
       }));
     }
@@ -243,7 +240,7 @@ class HomeController extends GetxService {
             'brand': brand,
           };
         } catch (e) {
-          print("Error enriching SKU $sku: $e");
+          debugPrint("Error enriching SKU $sku: $e");
         }
       }));
     }
@@ -326,12 +323,12 @@ class HomeController extends GetxService {
         await enrichProducts(data.product);
         dataList.value = data.product;
         // dataList.addAll(data.product);
-        print("List Length --->>> ${dataList.length}");
+        debugPrint("List Length --->>> ${dataList.length}");
         isLoading.value = false;
       }
     } catch (e, s) {
       isLoading.value = false;
-      print("Error on fetchData() => $e \n $s");
+      debugPrint("Error on fetchData() => $e \n $s");
     }
   }
 
@@ -405,12 +402,12 @@ class HomeController extends GetxService {
         // dataList.value = data.product;
         await enrichProducts(data.product);
         dataList.addAll(data.product);
-        print("New List Length --->>> ${dataList.length}");
+        debugPrint("New List Length --->>> ${dataList.length}");
         isLoading.value = false;
       }
     } catch (e, s) {
       isLoading.value = false;
-      print("Error on loadMore() => $e \n $s");
+      debugPrint("Error on loadMore() => $e \n $s");
     }
   }
 
@@ -420,7 +417,7 @@ class HomeController extends GetxService {
       if (res != false) {
         var data = FilterDataModel.fromJson(res);
         filterDataList.value = data.filter;
-        print("Filter Data List Length : ${filterDataList.length}");
+        debugPrint("Filter Data List Length : ${filterDataList.length}");
         filterDataList.insert(
           filterDataList.length,
           Filter(
@@ -433,7 +430,7 @@ class HomeController extends GetxService {
       }
     } catch (e, s) {
       isFilterLoading.value = false;
-      print("Error on getFilterValue() => $e \n $s");
+      debugPrint("Error on getFilterValue() => $e \n $s");
     }
   }
 
@@ -498,7 +495,7 @@ class HomeController extends GetxService {
 
   applySort() async {
     var now = DateTime.now();
-    print("start date <><> ${startDateTime?.toIso8601String()}");
+    debugPrint("start date <><> ${startDateTime?.toIso8601String()}");
     if (selectedSort.value == "Order (low to high)" ||
         selectedSort.value == "Order (high to low)") {
       if(selectFilterStartDate == null){
@@ -523,7 +520,7 @@ class HomeController extends GetxService {
       }
     }
 
-    print("start date <><><> ${startDateTime?.toIso8601String()}");
+    debugPrint("start date <><><> ${startDateTime?.toIso8601String()}");
 
     await fetchData();
   }
@@ -629,7 +626,7 @@ class HomeController extends GetxService {
       }
     } catch (e, s) {
       Get.back();
-      print("Error on getReport() => $e \n $s");
+      debugPrint("Error on getReport() => $e \n $s");
     }
   }
 }

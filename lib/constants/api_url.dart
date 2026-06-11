@@ -1,7 +1,7 @@
 abstract class ApiUrl{
   static const String baseUrl = "http://localhost:3001/v1";
   // static const String baseUrl = "http://3.7.174.180:3001/v1";
-  // static const String baseUrl = "http://elite_edition.api.rdtextiles.com";
+  // static const String baseUrl = "https://elite_edition.api.rdtextiles.com/v1";
   // static const String baseUrl = "http://127.0.0.1:3001/v1";
   static const String register = "auth/register";
   static const String login = "auth/login";
@@ -12,7 +12,9 @@ abstract class ApiUrl{
   static const String brandReport = "products/brandReport";
   static const String inventory = "inventory";
   static const String productList = "products/list";
+  static const String vendor = "vendor";
   static const String party = "party";
+  static const String stockOut = "stockOut";
   static const String productBase = "products";
 
   static String getFullImageUrl(String? url) {

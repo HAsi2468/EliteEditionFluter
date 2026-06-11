@@ -1,11 +1,19 @@
+import 'package:elite_edition/modules/inventory/view/stock_out_scanner_view.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:elite_edition/modules/inventory/controller/inventory_controller.dart';
 import 'package:elite_edition/modules/inventory/model/inventory_item_model.dart';
+import 'package:elite_edition/modules/inventory/model/vendor_model.dart';
 import 'package:elite_edition/modules/inventory/model/party_model.dart';
 import 'package:elite_edition/constants/app_color.dart';
 import 'package:elite_edition/constants/api_url.dart';
 import 'package:elite_edition/shared_widget/textfield_widget.dart';
+import 'package:elite_edition/shared_widget/create_pdf.dart';
+import 'package:elite_edition/utils/pdf_helper.dart';
+import 'package:elite_edition/shared_widget/app_snacks.dart';
+import 'package:elite_edition/shared_widget/app_pdfview.dart';
+import 'package:elite_edition/shared_widget/create_inventory_pdf.dart';
+import 'package:flutter/foundation.dart';
 
 class InventoryView extends GetView<InventoryController> {
   const InventoryView({super.key});
@@ -14,9 +22,11 @@ class InventoryView extends GetView<InventoryController> {
   Widget build(BuildContext context) {
     return Obx(() {
       final bool isDark = controller.isDarkMode.value;
-      final Color scaffoldBg = isDark ? AppColor.primary800 : const Color(0xFFF3F4F6);
+      final Color scaffoldBg =
+          isDark ? AppColor.primary800 : const Color(0xFFF3F4F6);
       final Color textColor = isDark ? AppColor.white : const Color(0xFF1F2937);
-      final Color textSecondary = isDark ? AppColor.primary600 : const Color(0xFF4B5563);
+      final Color textSecondary =
+          isDark ? AppColor.primary600 : const Color(0xFF4B5563);
       final Color searchBg = isDark ? AppColor.primary900 : Colors.white;
 
       return Scaffold(
@@ -26,7 +36,8 @@ class InventoryView extends GetView<InventoryController> {
           elevation: 0,
           leading: Navigator.canPop(context)
               ? IconButton(
-                  icon: Icon(Icons.arrow_back_ios_new_rounded, color: textColor),
+                  icon:
+                      Icon(Icons.arrow_back_ios_new_rounded, color: textColor),
                   onPressed: () => Get.back(),
                 )
               : null,
@@ -44,56 +55,70 @@ class InventoryView extends GetView<InventoryController> {
               icon: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 300),
                 transitionBuilder: (child, anim) => RotationTransition(
-                  turns: child.key == const ValueKey('dark') 
-                    ? Tween<double>(begin: 0.75, end: 1.0).animate(anim)
-                    : Tween<double>(begin: 0.25, end: 1.0).animate(anim),
+                  turns: child.key == const ValueKey('dark')
+                      ? Tween<double>(begin: 0.75, end: 1.0).animate(anim)
+                      : Tween<double>(begin: 0.25, end: 1.0).animate(anim),
                   child: ScaleTransition(scale: anim, child: child),
                 ),
                 child: isDark
-                    ? Icon(Icons.light_mode_rounded, color: Colors.amberAccent, key: const ValueKey('light'))
-                    : Icon(Icons.dark_mode_rounded, color: Colors.indigo.shade800, key: const ValueKey('dark')),
+                    ? const Icon(Icons.light_mode_rounded,
+                        color: Colors.amberAccent, key: ValueKey('light'))
+                    : Icon(Icons.dark_mode_rounded,
+                        color: Colors.indigo.shade800,
+                        key: const ValueKey('dark')),
               ),
               tooltip: isDark ? "Switch to Light Mode" : "Switch to Dark Mode",
               onPressed: () => controller.toggleTheme(),
             ),
-            IconButton(
-              icon: Icon(Icons.add_circle_outline_rounded, color: textColor, size: 28),
-              tooltip: "Add Stock Item",
-              onPressed: () {
-                controller.clearForm();
-                _showAddEditDialog(context, null);
-              },
-            ),
+
             PopupMenuButton<String>(
               icon: Icon(Icons.more_vert_rounded, color: textColor),
               color: isDark ? AppColor.primary900 : Colors.white,
               onSelected: (value) {
-                if (value == 'parties') {
-                  _showManagePartiesDialog(context);
+                if (value == 'vendors') {
+                  _showManageVendorsDialog(context);
+                } else if (value == 'parties') {
+                  _showManageNewPartiesDialog(context);
                 } else if (value == 'products') {
                   _showManageProductsDialog(context);
                 } else if (value == 'history') {
                   _showHistoryDialog(context);
+                } else if (value == 'report') {
+                  _showReportDateSelection(context);
                 }
               },
               itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
                 PopupMenuItem<String>(
-                  value: 'parties',
+                  value: 'vendors',
                   child: Row(
                     children: [
                       Icon(Icons.business_outlined, color: textColor, size: 18),
                       const SizedBox(width: 8),
-                      Text('Manage Parties', style: TextStyle(color: textColor)),
+                      Text('Manage Vendors',
+                          style: TextStyle(color: textColor)),
                     ],
                   ),
                 ),
+                PopupMenuItem<String>(
+                  value: 'parties',
+                  child: Row(
+                    children: [
+                      Icon(Icons.people_alt_outlined, color: textColor, size: 18),
+                      const SizedBox(width: 8),
+                      Text('Manage Parties',
+                          style: TextStyle(color: textColor)),
+                    ],
+                  ),
+                ),
+
                 PopupMenuItem<String>(
                   value: 'products',
                   child: Row(
                     children: [
                       Icon(Icons.category_outlined, color: textColor, size: 18),
                       const SizedBox(width: 8),
-                      Text('Manage Products', style: TextStyle(color: textColor)),
+                      Text('Manage Products',
+                          style: TextStyle(color: textColor)),
                     ],
                   ),
                 ),
@@ -104,6 +129,16 @@ class InventoryView extends GetView<InventoryController> {
                       Icon(Icons.history_rounded, color: textColor, size: 18),
                       const SizedBox(width: 8),
                       Text('History', style: TextStyle(color: textColor)),
+                    ],
+                  ),
+                ),
+                PopupMenuItem<String>(
+                  value: 'report',
+                  child: Row(
+                    children: [
+                      Icon(Icons.picture_as_pdf_outlined, color: textColor, size: 18),
+                      const SizedBox(width: 8),
+                      Text('Generate Report', style: TextStyle(color: textColor)),
                     ],
                   ),
                 ),
@@ -122,7 +157,8 @@ class InventoryView extends GetView<InventoryController> {
                 controller: controller.searchController,
                 hintText: "Search by item name, SKU or party",
                 bgColor: searchBg,
-                borderColor: isDark ? AppColor.transparent : const Color(0xFFD1D5DB),
+                borderColor:
+                    isDark ? AppColor.transparent : const Color(0xFFD1D5DB),
                 imgColor: textSecondary,
                 hintTextColour: textSecondary,
                 imgHeight: 25,
@@ -136,7 +172,8 @@ class InventoryView extends GetView<InventoryController> {
               child: Obx(() {
                 if (controller.isLoading.value) {
                   return Center(
-                    child: CircularProgressIndicator(color: isDark ? Colors.white : Colors.teal),
+                    child: CircularProgressIndicator(
+                        color: isDark ? Colors.white : Colors.teal),
                   );
                 }
 
@@ -145,7 +182,8 @@ class InventoryView extends GetView<InventoryController> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.inventory_2_outlined, color: textSecondary, size: 60),
+                        Icon(Icons.inventory_2_outlined,
+                            color: textSecondary, size: 60),
                         const SizedBox(height: 12),
                         Text(
                           "No inventory items found",
@@ -168,9 +206,71 @@ class InventoryView extends GetView<InventoryController> {
                 );
               }),
             ),
+
+            // Action Buttons at the bottom (Stock In & Stock Out)
+            Padding(
+              padding: const EdgeInsets.only(left: 16, right: 16, bottom: 20, top: 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 50,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          controller.clearForm();
+                          _showAddEditDialog(context, null);
+                        },
+                        icon: const Icon(Icons.add_box_rounded, color: Colors.white, size: 22),
+                        label: const Text(
+                          "Stock In",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blueAccent,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 2,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: SizedBox(
+                      height: 50,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Get.to(() => const StockOutScannerView());
+                        },
+                        icon: const Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 22),
+                        label: const Text(
+                          "Stock Out",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.teal.shade700,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 2,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
-
       );
     });
   }
@@ -180,16 +280,21 @@ class InventoryView extends GetView<InventoryController> {
     final bool isDark = controller.isDarkMode.value;
     final Color cardBg = isDark ? AppColor.primary900 : Colors.white;
     final Color textColor = isDark ? AppColor.white : const Color(0xFF1F2937);
-    final Color textSecondary = isDark ? AppColor.primary600 : const Color(0xFF6B7280);
-    final Color dividerColor = isDark ? Colors.white10 : const Color(0xFFE5E7EB);
-    final Color headerBg = isDark ? AppColor.primary800.withValues(alpha: 0.6) : const Color(0xFFF0FDF4);
+    final Color textSecondary =
+        isDark ? AppColor.primary600 : const Color(0xFF6B7280);
+    final Color dividerColor =
+        isDark ? Colors.white10 : const Color(0xFFE5E7EB);
+    final Color headerBg = isDark
+        ? AppColor.primary800.withValues(alpha: 0.6)
+        : const Color(0xFFF0FDF4);
 
     final int totalStock = group['totalStock'] as int;
     final int totalQty = group['totalQty'] as int;
     final String skuCode = group['skuCode'] as String;
     final String itemName = group['itemName'] as String;
     final String imageUrl = group['imageUrl'] as String;
-    final List<InventoryItemModel> entries = group['entries'] as List<InventoryItemModel>;
+    final List<InventoryItemModel> entries =
+        group['entries'] as List<InventoryItemModel>;
 
     Color stockColor;
     if (totalStock == 0) {
@@ -245,20 +350,26 @@ class InventoryView extends GetView<InventoryController> {
             children: [
               if (skuCode.isNotEmpty)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                   margin: const EdgeInsets.only(bottom: 4),
                   decoration: BoxDecoration(
-                    color: isDark ? AppColor.primary800 : const Color(0xFFEFF6FF),
+                    color:
+                        isDark ? AppColor.primary800 : const Color(0xFFEFF6FF),
                     borderRadius: BorderRadius.circular(5),
                     border: Border.all(
-                      color: isDark ? AppColor.primary600 : const Color(0xFFBFDBFE),
+                      color: isDark
+                          ? AppColor.primary600
+                          : const Color(0xFFBFDBFE),
                       width: 0.5,
                     ),
                   ),
                   child: Text(
                     skuCode,
                     style: TextStyle(
-                      color: isDark ? Colors.yellowAccent : const Color(0xFF1E40AF),
+                      color: isDark
+                          ? Colors.yellowAccent
+                          : const Color(0xFF1E40AF),
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
                     ),
@@ -282,11 +393,13 @@ class InventoryView extends GetView<InventoryController> {
               children: [
                 // Total stock badge
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: stockColor.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: stockColor.withValues(alpha: 0.4)),
+                    border:
+                        Border.all(color: stockColor.withValues(alpha: 0.4)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -307,7 +420,8 @@ class InventoryView extends GetView<InventoryController> {
                 const SizedBox(width: 8),
                 // Total qty badge
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: (isDark ? Colors.white10 : const Color(0xFFF3F4F6)),
                     borderRadius: BorderRadius.circular(20),
@@ -315,7 +429,8 @@ class InventoryView extends GetView<InventoryController> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.shopping_bag_outlined, size: 13, color: textSecondary),
+                      Icon(Icons.shopping_bag_outlined,
+                          size: 13, color: textSecondary),
                       const SizedBox(width: 4),
                       Text(
                         "Total: $totalQty",
@@ -327,7 +442,8 @@ class InventoryView extends GetView<InventoryController> {
                 const SizedBox(width: 8),
                 // Party count badge
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: (isDark ? Colors.white10 : const Color(0xFFF3F4F6)),
                     borderRadius: BorderRadius.circular(20),
@@ -335,7 +451,8 @@ class InventoryView extends GetView<InventoryController> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.business_outlined, size: 13, color: textSecondary),
+                      Icon(Icons.business_outlined,
+                          size: 13, color: textSecondary),
                       const SizedBox(width: 4),
                       Text(
                         "${entries.length} ${entries.length == 1 ? 'party' : 'parties'}",
@@ -367,7 +484,8 @@ class InventoryView extends GetView<InventoryController> {
                 ],
               ),
             ),
-            ...entries.map((item) => _buildPartyEntryRow(context, item, dividerColor)),
+            ...entries.map(
+                (item) => _buildPartyEntryRow(context, item, dividerColor)),
           ],
         ),
       ),
@@ -375,10 +493,12 @@ class InventoryView extends GetView<InventoryController> {
   }
 
   /// One row per party entry inside the expanded SKU card
-  Widget _buildPartyEntryRow(BuildContext context, InventoryItemModel item, Color dividerColor) {
+  Widget _buildPartyEntryRow(
+      BuildContext context, InventoryItemModel item, Color dividerColor) {
     final bool isDark = controller.isDarkMode.value;
     final Color textColor = isDark ? AppColor.white : const Color(0xFF1F2937);
-    final Color textSecondary = isDark ? AppColor.primary600 : const Color(0xFF6B7280);
+    final Color textSecondary =
+        isDark ? AppColor.primary600 : const Color(0xFF6B7280);
     final Color rowBg = isDark ? AppColor.primary900 : Colors.white;
 
     Color stockColor;
@@ -407,7 +527,8 @@ class InventoryView extends GetView<InventoryController> {
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.business_outlined, size: 12, color: textSecondary),
+                          Icon(Icons.business_outlined,
+                              size: 12, color: textSecondary),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
@@ -428,7 +549,8 @@ class InventoryView extends GetView<InventoryController> {
                           padding: const EdgeInsets.only(top: 2),
                           child: Text(
                             "Size: ${item.size}",
-                            style: TextStyle(color: textSecondary, fontSize: 11),
+                            style:
+                                TextStyle(color: textSecondary, fontSize: 11),
                           ),
                         ),
                     ],
@@ -464,7 +586,9 @@ class InventoryView extends GetView<InventoryController> {
                       Text(
                         "₹${item.salePrice.toStringAsFixed(0)}",
                         style: TextStyle(
-                          color: isDark ? Colors.cyanAccent : const Color(0xFF0D9488),
+                          color: isDark
+                              ? Colors.cyanAccent
+                              : const Color(0xFF0D9488),
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
                         ),
@@ -481,7 +605,8 @@ class InventoryView extends GetView<InventoryController> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.edit_outlined, size: 18, color: Colors.blueAccent),
+                      icon: const Icon(Icons.edit_outlined,
+                          size: 18, color: Colors.blueAccent),
                       tooltip: "Edit",
                       onPressed: () {
                         controller.populateForm(item);
@@ -491,7 +616,8 @@ class InventoryView extends GetView<InventoryController> {
                       constraints: const BoxConstraints(),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.delete_outline_rounded, size: 18, color: Colors.redAccent),
+                      icon: const Icon(Icons.delete_outline_rounded,
+                          size: 18, color: Colors.redAccent),
                       tooltip: "Delete",
                       onPressed: () => _confirmDelete(context, item),
                       padding: const EdgeInsets.all(4),
@@ -507,237 +633,9 @@ class InventoryView extends GetView<InventoryController> {
     );
   }
 
-
-
-  Widget _buildInventoryCard(BuildContext context, InventoryItemModel item) {
-    final bool isDark = controller.isDarkMode.value;
-    final Color cardBg = isDark ? AppColor.primary900 : Colors.white;
-    final Color textColor = isDark ? AppColor.white : const Color(0xFF1F2937);
-    final Color textSecondary = isDark ? AppColor.primary600 : const Color(0xFF6B7280);
-    final Color dividerColor = isDark ? Colors.white10 : const Color(0xFFE5E7EB);
-    final Color footerBg = isDark ? Colors.black12 : const Color(0xFFF9FAFB);
-
-
-    // Determine color for available stock indicator
-    Color stockColor;
-    if (item.currentlyAvailableStock == 0) {
-      stockColor = Colors.redAccent;
-    } else if (item.currentlyAvailableStock <= 5) {
-      stockColor = Colors.orangeAccent;
-    } else {
-      stockColor = isDark ? Colors.greenAccent : const Color(0xFF10B981);
-    }
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: cardBg,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.06),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          )
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Leading Image
-                Padding(
-                  padding: const EdgeInsets.only(left: 16, top: 16, bottom: 16),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      width: 80,
-                      height: 80,
-                      color: isDark ? AppColor.primary800 : const Color(0xFFF3F4F6),
-                      child: Image.network(
-                        ApiUrl.getFullImageUrl(item.imageUrl),
-                        width: 80,
-                        height: 80,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => Icon(
-                          Icons.image_not_supported_outlined,
-                          color: textSecondary,
-                          size: 32,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                
-                // Details Column
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                item.itemName,
-                                style: TextStyle(
-                                  color: textColor,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: isDark ? AppColor.primary800 : const Color(0xFFEFF6FF),
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(color: isDark ? AppColor.primary600 : const Color(0xFFBFDBFE), width: 0.5),
-                              ),
-                              child: Text(
-                                "Size: ${item.size}",
-                                style: TextStyle(
-                                  color: isDark ? Colors.yellowAccent : const Color(0xFF1E40AF),
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
-                          children: [
-                            Icon(Icons.business_outlined, color: textSecondary, size: 14),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                item.party,
-                                style: TextStyle(
-                                  color: textSecondary,
-                                  fontSize: 13,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            
-            Divider(color: dividerColor, height: 1),
-            
-            // Details Grid: Stocks and Prices
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Stock column
-                  _buildStatColumn(
-                    "Stock Status",
-                    "${item.currentlyAvailableStock} / ${item.qty}",
-                    valueColor: stockColor,
-                  ),
-                  
-                  // Sale Price
-                  _buildStatColumn(
-                    "Sale Price",
-                    "₹${item.salePrice.toStringAsFixed(2)}",
-                    valueColor: isDark ? Colors.cyanAccent : const Color(0xFF0D9488),
-                  ),
-                  
-                  // Purchase Price
-                  _buildStatColumn(
-                    "Purchase Price",
-                    "₹${item.purchasePrice.toStringAsFixed(2)}",
-                    valueColor: isDark ? Colors.orangeAccent : const Color(0xFFD97706),
-                  ),
-                ],
-              ),
-            ),
-            
-            Divider(color: dividerColor, height: 1),
-            
-            // Actions Row
-            Container(
-              color: footerBg,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton.icon(
-                    onPressed: () {
-                      controller.populateForm(item);
-                      _showAddEditDialog(context, item);
-                    },
-                    icon: const Icon(Icons.edit_outlined, size: 16, color: Colors.blueAccent),
-                    label: const Text(
-                      "Edit",
-                      style: TextStyle(color: Colors.blueAccent, fontSize: 13),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  TextButton.icon(
-                    onPressed: () => _confirmDelete(context, item),
-                    icon: const Icon(Icons.delete_outline_rounded, size: 16, color: Colors.redAccent),
-                    label: const Text(
-                      "Delete",
-                      style: TextStyle(color: Colors.redAccent, fontSize: 13),
-                    ),
-                  ),
-                ],
-              ),
-            )
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatColumn(String label, String value, {required Color valueColor}) {
-    final bool isDark = controller.isDarkMode.value;
-    final Color labelColor = isDark ? AppColor.primary600 : const Color(0xFF6B7280);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: labelColor,
-            fontSize: 11,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: TextStyle(
-            color: valueColor,
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
-    );
-  }
-
   void _showAddEditDialog(BuildContext context, InventoryItemModel? item) {
     final bool isEdit = item != null;
-    
+
     Get.dialog(
       Dialog(
         backgroundColor: Colors.transparent,
@@ -745,12 +643,17 @@ class InventoryView extends GetView<InventoryController> {
         child: Obx(() {
           final bool isDark = controller.isDarkMode.value;
           final Color dialogBg = isDark ? AppColor.primary900 : Colors.white;
-          final Color textColor = isDark ? AppColor.white : const Color(0xFF1F2937);
-          final Color labelColor = isDark ? AppColor.primary600 : const Color(0xFF4B5563);
-          final Color inputBg = isDark ? AppColor.primary800 : const Color(0xFFF3F4F6);
-          final Color borderCol = isDark ? AppColor.primary800 : const Color(0xFFE5E7EB);
-          final Color hintColor = isDark ? AppColor.primary600.withValues(alpha: 0.5) : const Color(0xFF9CA3AF);
-          final Color textSecondary = isDark ? AppColor.primary600 : const Color(0xFF6B7280);
+          final Color textColor =
+              isDark ? AppColor.white : const Color(0xFF1F2937);
+          final Color labelColor =
+              isDark ? AppColor.primary600 : const Color(0xFF4B5563);
+          final Color inputBg =
+              isDark ? AppColor.primary800 : const Color(0xFFF3F4F6);
+          final Color borderCol =
+              isDark ? AppColor.primary800 : const Color(0xFFE5E7EB);
+          final Color hintColor = isDark
+              ? AppColor.primary600.withValues(alpha: 0.5)
+              : const Color(0xFF9CA3AF);
 
           return Container(
             decoration: BoxDecoration(
@@ -773,10 +676,10 @@ class InventoryView extends GetView<InventoryController> {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
-                  
-                  // Party Select Dropdown + Add Party Button
+
+                  // Vendor Select Dropdown + Add Vendor Button
                   Text(
-                    "Party*",
+                    "Vendor*",
                     style: TextStyle(
                       color: labelColor,
                       fontSize: 12,
@@ -788,33 +691,42 @@ class InventoryView extends GetView<InventoryController> {
                     children: [
                       Expanded(
                         child: Obx(() {
-                          final currentParty = controller.selectedParty.value;
-                          final isInList = controller.partiesList.any((p) => p.name == currentParty);
+                          final currentParty = controller.selectedVendor.value;
+                          final isInList = controller.vendorsList
+                              .any((p) => p.name == currentParty);
                           return DropdownButtonFormField<String>(
                             dropdownColor: dialogBg,
-                            value: isInList ? currentParty : null,
-                            hint: Text("Select Party", style: TextStyle(color: hintColor, fontSize: 14)),
+                            initialValue: isInList ? currentParty : null,
+                            hint: Text("Select Vendor",
+                                style:
+                                    TextStyle(color: hintColor, fontSize: 14)),
                             style: TextStyle(color: textColor, fontSize: 14),
                             decoration: InputDecoration(
                               fillColor: inputBg,
                               filled: true,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 10),
                               enabledBorder: OutlineInputBorder(
                                 borderSide: BorderSide(color: borderCol),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               focusedBorder: OutlineInputBorder(
-                                borderSide: BorderSide(color: isDark ? AppColor.primary600 : const Color(0xFF9CA3AF)),
+                                borderSide: BorderSide(
+                                    color: isDark
+                                        ? AppColor.primary600
+                                        : const Color(0xFF9CA3AF)),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                             ),
-                            items: controller.partiesList.map((p) => DropdownMenuItem<String>(
-                              value: p.name,
-                              child: Text(p.name),
-                            )).toList(),
+                            items: controller.vendorsList
+                                .map((p) => DropdownMenuItem<String>(
+                                      value: p.name,
+                                      child: Text(p.name),
+                                    ))
+                                .toList(),
                             onChanged: (val) {
                               if (val != null) {
-                                controller.selectedParty.value = val;
+                                controller.selectedVendor.value = val;
                               }
                             },
                           );
@@ -822,15 +734,16 @@ class InventoryView extends GetView<InventoryController> {
                       ),
                       const SizedBox(width: 8),
                       IconButton(
-                        icon: const Icon(Icons.add_business_rounded, color: Colors.greenAccent, size: 24),
-                        tooltip: "Add New Party",
-                        onPressed: () => _showAddPartyDialog(context),
+                        icon: const Icon(Icons.add_business_rounded,
+                            color: Colors.greenAccent, size: 24),
+                        tooltip: "Add New Vendor",
+                        onPressed: () => _showAddVendorDialog(context),
                       ),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 12),
-                  
+
                   // Item Product Dropdown
                   Text(
                     "Product*",
@@ -846,23 +759,33 @@ class InventoryView extends GetView<InventoryController> {
                       Expanded(
                         child: Obx(() {
                           final currentSku = controller.selectedSkuCode.value;
-                          final isInList = controller.productsList.any((p) => p["skuCode"] == currentSku);
+                          final isInList = controller.productsList
+                              .any((p) => p["skuCode"] == currentSku);
                           return DropdownButtonFormField<dynamic>(
                             dropdownColor: dialogBg,
                             isExpanded: true,
-                            value: isInList ? controller.productsList.firstWhere((p) => p["skuCode"] == currentSku) : null,
-                            hint: Text("Select Product", style: TextStyle(color: hintColor, fontSize: 14)),
+                            initialValue: isInList
+                                ? controller.productsList.firstWhere(
+                                    (p) => p["skuCode"] == currentSku)
+                                : null,
+                            hint: Text("Select Product",
+                                style:
+                                    TextStyle(color: hintColor, fontSize: 14)),
                             style: TextStyle(color: textColor, fontSize: 14),
                             decoration: InputDecoration(
                               fillColor: inputBg,
                               filled: true,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 10),
                               enabledBorder: OutlineInputBorder(
                                 borderSide: BorderSide(color: borderCol),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               focusedBorder: OutlineInputBorder(
-                                borderSide: BorderSide(color: isDark ? AppColor.primary600 : const Color(0xFF9CA3AF)),
+                                borderSide: BorderSide(
+                                    color: isDark
+                                        ? AppColor.primary600
+                                        : const Color(0xFF9CA3AF)),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                             ),
@@ -879,13 +802,20 @@ class InventoryView extends GetView<InventoryController> {
                                       child: Container(
                                         width: 28,
                                         height: 28,
-                                        color: isDark ? AppColor.primary800 : const Color(0xFFE5E7EB),
+                                        color: isDark
+                                            ? AppColor.primary800
+                                            : const Color(0xFFE5E7EB),
                                         child: Image.network(
                                           ApiUrl.getFullImageUrl(img),
                                           width: 28,
                                           height: 28,
                                           fit: BoxFit.cover,
-                                          errorBuilder: (c, e, s) => Icon(Icons.image, size: 14, color: textSecondary),
+                                          errorBuilder: (c, e, s) => Icon(
+                                              Icons.image,
+                                              size: 14,
+                                              color: isDark
+                                                  ? AppColor.primary600
+                                                  : const Color(0xFF6B7280)),
                                         ),
                                       ),
                                     ),
@@ -895,7 +825,8 @@ class InventoryView extends GetView<InventoryController> {
                                         "$name ($sku)",
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(color: textColor, fontSize: 13),
+                                        style: TextStyle(
+                                            color: textColor, fontSize: 13),
                                       ),
                                     ),
                                   ],
@@ -912,23 +843,27 @@ class InventoryView extends GetView<InventoryController> {
                       ),
                       const SizedBox(width: 8),
                       IconButton(
-                        icon: const Icon(Icons.add_box_rounded, color: Colors.greenAccent, size: 24),
+                        icon: const Icon(Icons.add_box_rounded,
+                            color: Colors.greenAccent, size: 24),
                         tooltip: "Add New Product",
                         onPressed: () => _showAddProductDialog(context),
                       ),
                     ],
                   ),
-                  
+
                   // Image Preview
                   Obx(() {
-                    if (controller.selectedImageUrl.value.isEmpty) return const SizedBox.shrink();
+                    if (controller.selectedImageUrl.value.isEmpty) {
+                      return const SizedBox.shrink();
+                    }
                     return Padding(
                       padding: const EdgeInsets.only(top: 12.0),
                       child: Center(
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(8),
                           child: Image.network(
-                            ApiUrl.getFullImageUrl(controller.selectedImageUrl.value),
+                            ApiUrl.getFullImageUrl(
+                                controller.selectedImageUrl.value),
                             height: 80,
                             width: 80,
                             fit: BoxFit.cover,
@@ -938,9 +873,9 @@ class InventoryView extends GetView<InventoryController> {
                       ),
                     );
                   }),
-                  
+
                   const SizedBox(height: 12),
-                  
+
                   // Size Dropdown or Text Box
                   Text(
                     "Size*",
@@ -960,44 +895,56 @@ class InventoryView extends GetView<InventoryController> {
                           filled: true,
                           hintText: "Enter Size manually",
                           hintStyle: TextStyle(color: hintColor, fontSize: 13),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 10),
                           enabledBorder: OutlineInputBorder(
                             borderSide: BorderSide(color: borderCol),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: isDark ? AppColor.primary600 : const Color(0xFF9CA3AF)),
+                            borderSide: BorderSide(
+                                color: isDark
+                                    ? AppColor.primary600
+                                    : const Color(0xFF9CA3AF)),
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
                         onChanged: (val) => controller.selectedSize.value = val,
                       );
                     }
-                    
+
                     final currentSize = controller.selectedSize.value;
-                    final isInList = controller.sizeOptionsList.contains(currentSize);
+                    final isInList =
+                        controller.sizeOptionsList.contains(currentSize);
                     return DropdownButtonFormField<String>(
                       dropdownColor: dialogBg,
-                      value: isInList ? currentSize : null,
-                      hint: Text("Select Size", style: TextStyle(color: hintColor, fontSize: 14)),
+                      initialValue: isInList ? currentSize : null,
+                      hint: Text("Select Size",
+                          style: TextStyle(color: hintColor, fontSize: 14)),
                       style: TextStyle(color: textColor, fontSize: 14),
                       decoration: InputDecoration(
                         fillColor: inputBg,
                         filled: true,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
                         enabledBorder: OutlineInputBorder(
                           borderSide: BorderSide(color: borderCol),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: isDark ? AppColor.primary600 : const Color(0xFF9CA3AF)),
+                          borderSide: BorderSide(
+                              color: isDark
+                                  ? AppColor.primary600
+                                  : const Color(0xFF9CA3AF)),
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      items: controller.sizeOptionsList.map((sz) => DropdownMenuItem<String>(
-                        value: sz,
-                        child: Text(sz),
-                      )).toList(),
+                      items: controller.sizeOptionsList
+                          .map((sz) => DropdownMenuItem<String>(
+                                value: sz,
+                                child: Text(sz),
+                              ))
+                          .toList(),
                       onChanged: (val) {
                         if (val != null) {
                           controller.selectedSize.value = val;
@@ -1005,9 +952,9 @@ class InventoryView extends GetView<InventoryController> {
                       },
                     );
                   }),
-                  
+
                   const SizedBox(height: 12),
-                  
+
                   // Date Picker Row
                   Text(
                     "Date*",
@@ -1035,7 +982,8 @@ class InventoryView extends GetView<InventoryController> {
                                       surface: AppColor.primary800,
                                       onSurface: Colors.white,
                                     ),
-                                    dialogBackgroundColor: AppColor.primary900,
+                                    dialogTheme: DialogThemeData(
+                                        backgroundColor: AppColor.primary900),
                                   )
                                 : ThemeData.light().copyWith(
                                     colorScheme: ColorScheme.light(
@@ -1054,7 +1002,8 @@ class InventoryView extends GetView<InventoryController> {
                       }
                     },
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 12),
                       decoration: BoxDecoration(
                         color: inputBg,
                         borderRadius: BorderRadius.circular(8),
@@ -1064,31 +1013,43 @@ class InventoryView extends GetView<InventoryController> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Obx(() => Text(
-                            "${controller.selectedDate.value.day.toString().padLeft(2, '0')}-${controller.selectedDate.value.month.toString().padLeft(2, '0')}-${controller.selectedDate.value.year}",
-                            style: TextStyle(color: textColor, fontSize: 14),
-                          )),
-                          Icon(Icons.calendar_today_rounded, color: labelColor, size: 18),
+                                "${controller.selectedDate.value.day.toString().padLeft(2, '0')}-${controller.selectedDate.value.month.toString().padLeft(2, '0')}-${controller.selectedDate.value.year}",
+                                style:
+                                    TextStyle(color: textColor, fontSize: 14),
+                              )),
+                          Icon(Icons.calendar_today_rounded,
+                              color: labelColor, size: 18),
                         ],
                       ),
                     ),
                   ),
-                  
+
                   const SizedBox(height: 12),
-                  _buildFormInput("Initial Total Qty", controller.qtyController, keyboardType: TextInputType.number),
+                  _buildFormInput("Initial Total Qty", controller.qtyController,
+                      keyboardType: TextInputType.number),
                   const SizedBox(height: 12),
-                  _buildFormInput("Available Stock", controller.stockController, keyboardType: TextInputType.number, enabled: false),
+                  _buildFormInput("Available Stock", controller.stockController,
+                      keyboardType: TextInputType.number, enabled: false),
                   const SizedBox(height: 12),
-                  _buildFormInput("Purchase Price (₹)", controller.purchasePriceController, keyboardType: const TextInputType.numberWithOptions(decimal: true)),
+                  _buildFormInput(
+                      "Purchase Price (₹)", controller.purchasePriceController,
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true)),
                   const SizedBox(height: 12),
-                  _buildFormInput("Sale Price (₹)", controller.salePriceController, keyboardType: const TextInputType.numberWithOptions(decimal: true)),
-                  
+                  _buildFormInput(
+                      "Sale Price (₹)", controller.salePriceController,
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true)),
+
                   const SizedBox(height: 24),
-                  
+
                   // Staged items list
                   if (!isEdit) ...[
                     Obx(() {
-                      if (controller.stagedItems.isEmpty) return const SizedBox.shrink();
-                      
+                      if (controller.stagedItems.isEmpty) {
+                        return const SizedBox.shrink();
+                      }
+
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -1107,7 +1068,8 @@ class InventoryView extends GetView<InventoryController> {
                                 onPressed: () => controller.stagedItems.clear(),
                                 child: const Text(
                                   "Clear All",
-                                  style: TextStyle(color: Colors.redAccent, fontSize: 12),
+                                  style: TextStyle(
+                                      color: Colors.redAccent, fontSize: 12),
                                 ),
                               ),
                             ],
@@ -1116,10 +1078,12 @@ class InventoryView extends GetView<InventoryController> {
                           Container(
                             constraints: const BoxConstraints(maxHeight: 180),
                             decoration: BoxDecoration(
-                              color: isDark ? AppColor.primary800 : const Color(0xFFF3F4F6),
+                              color: inputBg,
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(
-                                color: isDark ? AppColor.primary600 : const Color(0xFFE5E7EB),
+                                color: isDark
+                                    ? AppColor.primary600
+                                    : const Color(0xFFE5E7EB),
                                 width: 0.5,
                               ),
                             ),
@@ -1138,7 +1102,8 @@ class InventoryView extends GetView<InventoryController> {
                                 final sku = staged["skuCode"] ?? "";
                                 final size = staged["size"] ?? "";
                                 final qty = staged["qty"] ?? 0;
-                                final purchasePrice = staged["purchasePrice"] ?? 0.0;
+                                final purchasePrice =
+                                    staged["purchasePrice"] ?? 0.0;
                                 final salePrice = staged["salePrice"] ?? 0.0;
 
                                 return Row(
@@ -1148,15 +1113,17 @@ class InventoryView extends GetView<InventoryController> {
                                       child: Container(
                                         width: 36,
                                         height: 36,
-                                        color: isDark ? AppColor.primary900 : const Color(0xFFE5E7EB),
+                                        color: isDark
+                                            ? AppColor.primary900
+                                            : const Color(0xFFE5E7EB),
                                         child: Image.network(
                                           ApiUrl.getFullImageUrl(img),
                                           width: 36,
                                           height: 36,
                                           fit: BoxFit.cover,
                                           errorBuilder: (c, e, s) => Icon(
-                                            Icons.image, 
-                                            size: 16, 
+                                            Icons.image,
+                                            size: 16,
                                             color: labelColor,
                                           ),
                                         ),
@@ -1165,7 +1132,8 @@ class InventoryView extends GetView<InventoryController> {
                                     const SizedBox(width: 10),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             name,
@@ -1181,14 +1149,18 @@ class InventoryView extends GetView<InventoryController> {
                                           Text(
                                             "SKU: $sku | Size: $size | Qty: $qty",
                                             style: TextStyle(
-                                              color: textSecondary,
+                                              color: isDark
+                                                  ? AppColor.primary600
+                                                  : const Color(0xFF6B7280),
                                               fontSize: 11,
                                             ),
                                           ),
                                           Text(
                                             "Buy: ₹$purchasePrice | Sell: ₹$salePrice",
                                             style: TextStyle(
-                                              color: isDark ? Colors.cyanAccent : const Color(0xFF0D9488),
+                                              color: isDark
+                                                  ? Colors.cyanAccent
+                                                  : const Color(0xFF0D9488),
                                               fontSize: 10,
                                             ),
                                           ),
@@ -1215,6 +1187,7 @@ class InventoryView extends GetView<InventoryController> {
                       );
                     }),
                   ],
+
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
@@ -1227,17 +1200,23 @@ class InventoryView extends GetView<InventoryController> {
                       ),
                       const SizedBox(width: 12),
                       Obx(() {
-                        final isActionLoading = controller.isActionLoading.value;
+                        final isActionLoading =
+                            controller.isActionLoading.value;
                         final hasStaged = controller.stagedItems.isNotEmpty;
-                        
+
                         return Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             if (!isEdit && !isActionLoading) ...[
                               OutlinedButton.icon(
                                 style: OutlinedButton.styleFrom(
-                                  foregroundColor: isDark ? Colors.greenAccent : Colors.green.shade800,
-                                  side: BorderSide(color: isDark ? Colors.greenAccent : Colors.green.shade800),
+                                  foregroundColor: isDark
+                                      ? Colors.greenAccent
+                                      : Colors.green.shade800,
+                                  side: BorderSide(
+                                      color: isDark
+                                          ? Colors.greenAccent
+                                          : Colors.green.shade800),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(8),
                                   ),
@@ -1245,18 +1224,22 @@ class InventoryView extends GetView<InventoryController> {
                                 onPressed: () {
                                   controller.stageCurrentItem();
                                 },
-                                icon: const Icon(Icons.playlist_add_rounded, size: 18),
-                                label: const Text("Stage Item"),
+                                icon: const Icon(Icons.playlist_add_rounded,
+                                    size: 18),
+                                label: const Text("Add more item"),
                               ),
                               const SizedBox(width: 12),
                             ],
+
                             if (isActionLoading)
                               const Padding(
                                 padding: EdgeInsets.symmetric(horizontal: 16),
                                 child: SizedBox(
                                   width: 24,
                                   height: 24,
-                                  child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.greenAccent),
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2.5,
+                                      color: Colors.greenAccent),
                                 ),
                               )
                             else
@@ -1270,25 +1253,30 @@ class InventoryView extends GetView<InventoryController> {
                                 onPressed: () async {
                                   final navigator = Navigator.of(context);
                                   if (isEdit) {
-                                    final success = await controller.updateInventoryItem(item.id);
+                                    final success = await controller
+                                        .updateInventoryItem(item.id);
                                     if (success) {
                                       navigator.pop();
                                     }
                                   } else {
                                     if (hasStaged) {
-                                      // If user typed details but hasn't clicked stage yet, auto-stage them
-                                      final currentParty = controller.selectedParty.value.trim();
-                                      final currentItem = controller.itemNameController.text.trim();
-                                      final currentSize = controller.selectedSize.value.trim();
-                                      if (currentParty.isNotEmpty && currentItem.isNotEmpty && currentSize.isNotEmpty) {
+                                      final currentParty = controller
+                                          .selectedVendor.value
+                                          .trim();
+                                      final currentSize =
+                                          controller.selectedSize.value.trim();
+                                      if (currentParty.isNotEmpty &&
+                                          currentSize.isNotEmpty) {
                                         controller.stageCurrentItem();
                                       }
-                                      final success = await controller.addStagedInventoryItems();
+                                      final success = await controller
+                                          .addStagedInventoryItems();
                                       if (success) {
                                         navigator.pop();
                                       }
                                     } else {
-                                      final success = await controller.addInventoryItem();
+                                      final success =
+                                          await controller.addInventoryItem();
                                       if (success) {
                                         navigator.pop();
                                       }
@@ -1296,14 +1284,18 @@ class InventoryView extends GetView<InventoryController> {
                                   }
                                 },
                                 child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 8),
                                   child: Text(
                                     isEdit
                                         ? "Save"
                                         : (hasStaged
                                             ? "Save All (${controller.stagedItems.length})"
                                             : "Add"),
-                                    style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                                    style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold),
                                   ),
                                 ),
                               ),
@@ -1321,7 +1313,7 @@ class InventoryView extends GetView<InventoryController> {
     );
   }
 
-  void _showAddPartyDialog(BuildContext context) {
+  void _showAddVendorDialog(BuildContext context) {
     Get.dialog(
       Dialog(
         backgroundColor: Colors.transparent,
@@ -1329,8 +1321,10 @@ class InventoryView extends GetView<InventoryController> {
         child: Obx(() {
           final bool isDark = controller.isDarkMode.value;
           final Color dialogBg = isDark ? AppColor.primary900 : Colors.white;
-          final Color textColor = isDark ? AppColor.white : const Color(0xFF1F2937);
-          final Color labelColor = isDark ? AppColor.primary600 : const Color(0xFF4B5563);
+          final Color textColor =
+              isDark ? AppColor.white : const Color(0xFF1F2937);
+          final Color labelColor =
+              isDark ? AppColor.primary600 : const Color(0xFF4B5563);
 
           return Container(
             decoration: BoxDecoration(
@@ -1344,7 +1338,7 @@ class InventoryView extends GetView<InventoryController> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    "Add New Party",
+                    "Add New Vendor",
                     style: TextStyle(
                       color: textColor,
                       fontWeight: FontWeight.bold,
@@ -1353,18 +1347,23 @@ class InventoryView extends GetView<InventoryController> {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
-                  _buildFormInput("Party Name*", controller.newPartyNameController),
+                  _buildFormInput(
+                      "Vendor Name*", controller.newVendorNameController),
                   const SizedBox(height: 12),
-                  _buildFormInput("Phone Number", controller.newPartyPhoneController, keyboardType: TextInputType.phone),
+                  _buildFormInput(
+                      "Phone Number", controller.newVendorPhoneController,
+                      keyboardType: TextInputType.phone),
                   const SizedBox(height: 12),
-                  _buildFormInput("Address", controller.newPartyAddressController),
+                  _buildFormInput(
+                      "Address", controller.newVendorAddressController),
                   const SizedBox(height: 20),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       TextButton(
                         onPressed: () => Navigator.of(context).pop(),
-                        child: Text("Cancel", style: TextStyle(color: labelColor, fontSize: 15)),
+                        child: Text("Cancel",
+                            style: TextStyle(color: labelColor, fontSize: 15)),
                       ),
                       const SizedBox(width: 12),
                       Obx(() {
@@ -1374,7 +1373,8 @@ class InventoryView extends GetView<InventoryController> {
                             child: SizedBox(
                               width: 20,
                               height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.greenAccent),
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.greenAccent),
                             ),
                           );
                         }
@@ -1386,12 +1386,15 @@ class InventoryView extends GetView<InventoryController> {
                             ),
                           ),
                           onPressed: () async {
-                            final success = await controller.addParty();
+                            final success = await controller.addVendor();
                             if (success) {
                               Navigator.of(context).pop();
                             }
                           },
-                          child: const Text("Save", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                          child: const Text("Save",
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold)),
                         );
                       }),
                     ],
@@ -1413,8 +1416,10 @@ class InventoryView extends GetView<InventoryController> {
         child: Obx(() {
           final bool isDark = controller.isDarkMode.value;
           final Color dialogBg = isDark ? AppColor.primary900 : Colors.white;
-          final Color textColor = isDark ? AppColor.white : const Color(0xFF1F2937);
-          final Color labelColor = isDark ? AppColor.primary600 : const Color(0xFF4B5563);
+          final Color textColor =
+              isDark ? AppColor.white : const Color(0xFF1F2937);
+          final Color labelColor =
+              isDark ? AppColor.primary600 : const Color(0xFF4B5563);
 
           return Container(
             decoration: BoxDecoration(
@@ -1439,18 +1444,68 @@ class InventoryView extends GetView<InventoryController> {
                   const SizedBox(height: 16),
                   _buildFormInput("SKU Code*", controller.newSkuController),
                   const SizedBox(height: 12),
-                  _buildFormInput("Product Name*", controller.newDescController),
+                  _buildFormInput(
+                      "Product Name*", controller.newDescController),
                   const SizedBox(height: 12),
                   _buildFormInput("Image URL", controller.newImgUrlController),
                   const SizedBox(height: 12),
-                  _buildFormInput("Sizes (comma separated, e.g. S,M,L)", controller.newSizesController),
+                  StatefulBuilder(
+                    builder: (context, setState) {
+                      final Color inputBg = isDark ? AppColor.primary800 : const Color(0xFFF3F4F6);
+                      final Color hintColor = isDark ? AppColor.primary600.withValues(alpha: 0.5) : const Color(0xFF9CA3AF);
+                      final Color borderCol = isDark ? AppColor.primary600 : const Color(0xFFE5E7EB);
+                      final List<String> sizesList = ['3XS', 'XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL', '5XL', '6XL', '7XL', '8XL', '9XL', '10XL'];
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Size*",
+                            style: TextStyle(
+                              color: labelColor,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          DropdownButtonFormField<String>(
+                            dropdownColor: dialogBg,
+                            value: controller.newSizesController.text.isEmpty ? null : controller.newSizesController.text,
+                            hint: Text("Select Size", style: TextStyle(color: hintColor, fontSize: 14)),
+                            style: TextStyle(color: textColor, fontSize: 14),
+                            decoration: InputDecoration(
+                              fillColor: inputBg,
+                              filled: true,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              enabledBorder: OutlineInputBorder(
+                                borderSide: BorderSide(color: borderCol),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderSide: BorderSide(color: isDark ? AppColor.primary600 : const Color(0xFF9CA3AF)),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            items: sizesList.map((sz) => DropdownMenuItem(value: sz, child: Text(sz))).toList(),
+                            onChanged: (val) {
+                              if (val != null) {
+                                setState(() {
+                                  controller.newSizesController.text = val;
+                                });
+                              }
+                            },
+                          ),
+                        ],
+                      );
+                    }
+                  ),
                   const SizedBox(height: 20),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       TextButton(
                         onPressed: () => Navigator.of(context).pop(),
-                        child: Text("Cancel", style: TextStyle(color: labelColor, fontSize: 15)),
+                        child: Text("Cancel",
+                            style: TextStyle(color: labelColor, fontSize: 15)),
                       ),
                       const SizedBox(width: 12),
                       Obx(() {
@@ -1460,7 +1515,8 @@ class InventoryView extends GetView<InventoryController> {
                             child: SizedBox(
                               width: 20,
                               height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.greenAccent),
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.greenAccent),
                             ),
                           );
                         }
@@ -1477,7 +1533,10 @@ class InventoryView extends GetView<InventoryController> {
                               Navigator.of(context).pop();
                             }
                           },
-                          child: const Text("Save", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                          child: const Text("Save",
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold)),
                         );
                       }),
                     ],
@@ -1492,60 +1551,72 @@ class InventoryView extends GetView<InventoryController> {
   }
 
   Widget _buildFormInput(
-    String label, 
+    String label,
     TextEditingController txtController, {
     TextInputType keyboardType = TextInputType.text,
     bool enabled = true,
   }) {
-    final bool isDark = controller.isDarkMode.value;
-    final Color textColor = isDark ? AppColor.white : const Color(0xFF1F2937);
-    final Color disabledTextColor = isDark ? Colors.white38 : Colors.black38;
-    final Color labelColor = isDark ? AppColor.primary600 : const Color(0xFF4B5563);
-    final Color inputBg = isDark ? AppColor.primary800 : const Color(0xFFF3F4F6);
-    final Color hintColor = isDark ? AppColor.primary600.withValues(alpha: 0.5) : const Color(0xFF9CA3AF);
+    return Obx(() {
+      final bool isDark = controller.isDarkMode.value;
+      final Color textColor = isDark ? AppColor.white : const Color(0xFF1F2937);
+      final Color disabledTextColor = isDark ? Colors.white38 : Colors.black38;
+      final Color labelColor =
+          isDark ? AppColor.primary600 : const Color(0xFF4B5563);
+      final Color inputBg =
+          isDark ? AppColor.primary800 : const Color(0xFFF3F4F6);
+      final Color hintColor = isDark
+          ? AppColor.primary600.withValues(alpha: 0.5)
+          : const Color(0xFF9CA3AF);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: labelColor,
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 4),
-        TextField(
-          controller: txtController,
-          keyboardType: keyboardType,
-          enabled: enabled,
-          style: TextStyle(
-            color: enabled ? textColor : disabledTextColor,
-            fontSize: 14,
-          ),
-          decoration: InputDecoration(
-            fillColor: inputBg,
-            filled: true,
-            hintText: "Enter ${label.replaceAll('*', '')}",
-            hintStyle: TextStyle(color: hintColor, fontSize: 13),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            enabledBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: isDark ? AppColor.primary800 : const Color(0xFFE5E7EB)),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: isDark ? AppColor.primary600 : const Color(0xFF9CA3AF)),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            disabledBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: isDark ? Colors.white12 : const Color(0xFFE5E7EB)),
-              borderRadius: BorderRadius.circular(8),
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: labelColor,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
             ),
           ),
-        ),
-      ],
-    );
+          const SizedBox(height: 4),
+          TextField(
+            controller: txtController,
+            keyboardType: keyboardType,
+            enabled: enabled,
+            style: TextStyle(
+              color: enabled ? textColor : disabledTextColor,
+              fontSize: 14,
+            ),
+            decoration: InputDecoration(
+              fillColor: inputBg,
+              filled: true,
+              hintText: "Enter ${label.replaceAll('*', '')}",
+              hintStyle: TextStyle(color: hintColor, fontSize: 13),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              enabledBorder: OutlineInputBorder(
+                borderSide: BorderSide(
+                    color:
+                        isDark ? AppColor.primary800 : const Color(0xFFE5E7EB)),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderSide: BorderSide(
+                    color:
+                        isDark ? AppColor.primary600 : const Color(0xFF9CA3AF)),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              disabledBorder: OutlineInputBorder(
+                borderSide: BorderSide(
+                    color: isDark ? Colors.white12 : const Color(0xFFE5E7EB)),
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+        ],
+      );
+    });
   }
 
   void _confirmDelete(BuildContext context, InventoryItemModel item) {
@@ -1553,8 +1624,10 @@ class InventoryView extends GetView<InventoryController> {
       Obx(() {
         final bool isDark = controller.isDarkMode.value;
         final Color dialogBg = isDark ? AppColor.primary900 : Colors.white;
-        final Color textColor = isDark ? AppColor.white : const Color(0xFF1F2937);
-        final Color textSecondary = isDark ? AppColor.primary600 : const Color(0xFF4B5563);
+        final Color textColor =
+            isDark ? AppColor.white : const Color(0xFF1F2937);
+        final Color textSecondary =
+            isDark ? AppColor.primary600 : const Color(0xFF4B5563);
 
         return AlertDialog(
           backgroundColor: dialogBg,
@@ -1581,17 +1654,20 @@ class InventoryView extends GetView<InventoryController> {
                   child: SizedBox(
                     width: 20,
                     height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.redAccent),
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.redAccent),
                   ),
                 );
               }
               return ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade700),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red.shade700),
                 onPressed: () async {
                   await controller.deleteInventoryItem(item.id);
                   Get.back();
                 },
-                child: const Text("Delete", style: TextStyle(color: Colors.white)),
+                child:
+                    const Text("Delete", style: TextStyle(color: Colors.white)),
               );
             }),
           ],
@@ -1600,7 +1676,7 @@ class InventoryView extends GetView<InventoryController> {
     );
   }
 
-  void _showManagePartiesDialog(BuildContext context) {
+  void _showManageVendorsDialog(BuildContext context) {
     Get.dialog(
       Dialog(
         backgroundColor: Colors.transparent,
@@ -1608,9 +1684,12 @@ class InventoryView extends GetView<InventoryController> {
         child: Obx(() {
           final bool isDark = controller.isDarkMode.value;
           final Color dialogBg = isDark ? AppColor.primary900 : Colors.white;
-          final Color textColor = isDark ? AppColor.white : const Color(0xFF1F2937);
-          final Color labelColor = isDark ? AppColor.primary600 : const Color(0xFF4B5563);
-          final Color cardBg = isDark ? AppColor.primary800 : const Color(0xFFF3F4F6);
+          final Color textColor =
+              isDark ? AppColor.white : const Color(0xFF1F2937);
+          final Color labelColor =
+              isDark ? AppColor.primary600 : const Color(0xFF4B5563);
+          final Color cardBg =
+              isDark ? AppColor.primary800 : const Color(0xFFF3F4F6);
 
           return Container(
             decoration: BoxDecoration(
@@ -1628,50 +1707,59 @@ class InventoryView extends GetView<InventoryController> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      "Manage Parties",
+                      "Manage Vendors",
                       style: TextStyle(
                         color: textColor,
                         fontWeight: FontWeight.bold,
                         fontSize: 20,
                       ),
                     ),
+                    const SizedBox(width: 12),
                     ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.green.shade700,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
                       ),
-                      onPressed: () => _showAddPartyDialog(context),
-                      icon: const Icon(Icons.add, color: Colors.white, size: 18),
-                      label: const Text("Add", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                      onPressed: () => _showAddVendorDialog(context),
+                      icon:
+                          const Icon(Icons.add, color: Colors.white, size: 18),
+                      label: const Text("Add",
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13)),
                     ),
                   ],
                 ),
                 const SizedBox(height: 16),
                 Expanded(
                   child: Obx(() {
-                    if (controller.partiesList.isEmpty) {
+                    if (controller.vendorsList.isEmpty) {
                       return Center(
                         child: Text(
-                          "No parties found",
+                          "No vendors found",
                           style: TextStyle(color: labelColor, fontSize: 14),
                         ),
                       );
                     }
                     return ListView.separated(
                       shrinkWrap: true,
-                      itemCount: controller.partiesList.length,
-                      separatorBuilder: (context, index) => const SizedBox(height: 8),
+                      itemCount: controller.vendorsList.length,
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 8),
                       itemBuilder: (context, index) {
-                        final party = controller.partiesList[index];
+                        final party = controller.vendorsList[index];
                         return Container(
                           decoration: BoxDecoration(
                             color: cardBg,
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
                           child: Row(
                             children: [
                               Expanded(
@@ -1690,14 +1778,16 @@ class InventoryView extends GetView<InventoryController> {
                                       const SizedBox(height: 2),
                                       Text(
                                         "Phone: ${party.phone}",
-                                        style: TextStyle(color: labelColor, fontSize: 12),
+                                        style: TextStyle(
+                                            color: labelColor, fontSize: 12),
                                       ),
                                     ],
                                     if (party.address.isNotEmpty) ...[
                                       const SizedBox(height: 2),
                                       Text(
                                         "Address: ${party.address}",
-                                        style: TextStyle(color: labelColor, fontSize: 12),
+                                        style: TextStyle(
+                                            color: labelColor, fontSize: 12),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                       ),
@@ -1706,15 +1796,18 @@ class InventoryView extends GetView<InventoryController> {
                                 ),
                               ),
                               IconButton(
-                                icon: const Icon(Icons.edit_outlined, color: Colors.blueAccent),
+                                icon: const Icon(Icons.edit_outlined,
+                                    color: Colors.blueAccent),
                                 onPressed: () {
-                                  controller.prefillPartyForm(party);
+                                  controller.prefillVendorForm(party);
                                   _showEditPartyDialog(context, party);
                                 },
                               ),
                               IconButton(
-                                icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
-                                onPressed: () => _confirmDeleteParty(context, party),
+                                icon: const Icon(Icons.delete_outline_rounded,
+                                    color: Colors.redAccent),
+                                onPressed: () =>
+                                    _confirmDeleteParty(context, party),
                               ),
                             ],
                           ),
@@ -1742,13 +1835,15 @@ class InventoryView extends GetView<InventoryController> {
     );
   }
 
-  void _confirmDeleteParty(BuildContext context, PartyModel party) {
+  void _confirmDeleteParty(BuildContext context, VendorModel party) {
     Get.dialog(
       Obx(() {
         final bool isDark = controller.isDarkMode.value;
         final Color dialogBg = isDark ? AppColor.primary900 : Colors.white;
-        final Color textColor = isDark ? AppColor.white : const Color(0xFF1F2937);
-        final Color textSecondary = isDark ? AppColor.primary600 : const Color(0xFF4B5563);
+        final Color textColor =
+            isDark ? AppColor.white : const Color(0xFF1F2937);
+        final Color textSecondary =
+            isDark ? AppColor.primary600 : const Color(0xFF4B5563);
 
         return AlertDialog(
           backgroundColor: dialogBg,
@@ -1775,17 +1870,20 @@ class InventoryView extends GetView<InventoryController> {
                   child: SizedBox(
                     width: 20,
                     height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.redAccent),
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.redAccent),
                   ),
                 );
               }
               return ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade700),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red.shade700),
                 onPressed: () async {
-                  await controller.deleteParty(party.id);
+                  await controller.deleteVendor(party.id);
                   Navigator.of(context).pop();
                 },
-                child: const Text("Delete", style: TextStyle(color: Colors.white)),
+                child:
+                    const Text("Delete", style: TextStyle(color: Colors.white)),
               );
             }),
           ],
@@ -1802,9 +1900,12 @@ class InventoryView extends GetView<InventoryController> {
         child: Obx(() {
           final bool isDark = controller.isDarkMode.value;
           final Color dialogBg = isDark ? AppColor.primary900 : Colors.white;
-          final Color textColor = isDark ? AppColor.white : const Color(0xFF1F2937);
-          final Color labelColor = isDark ? AppColor.primary600 : const Color(0xFF4B5563);
-          final Color cardBg = isDark ? AppColor.primary800 : const Color(0xFFF3F4F6);
+          final Color textColor =
+              isDark ? AppColor.white : const Color(0xFF1F2937);
+          final Color labelColor =
+              isDark ? AppColor.primary600 : const Color(0xFF4B5563);
+          final Color cardBg =
+              isDark ? AppColor.primary800 : const Color(0xFFF3F4F6);
 
           return Container(
             decoration: BoxDecoration(
@@ -1829,17 +1930,45 @@ class InventoryView extends GetView<InventoryController> {
                         fontSize: 20,
                       ),
                     ),
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green.shade700,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                    Row(
+                      children: [
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue.shade700,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
+                          ),
+                          onPressed: () => controller.syncProductsFromSaleOrders(),
+                          icon: const Icon(Icons.sync, color: Colors.white, size: 18),
+                          label: const Text("Sync",
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13)),
                         ),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      ),
-                      onPressed: () => _showAddProductDialog(context),
-                      icon: const Icon(Icons.add, color: Colors.white, size: 18),
-                      label: const Text("Add", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                        const SizedBox(width: 8),
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green.shade700,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
+                          ),
+                          onPressed: () => _showAddProductDialog(context),
+                          icon:
+                              const Icon(Icons.add, color: Colors.white, size: 18),
+                          label: const Text("Add",
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13)),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -1857,13 +1986,16 @@ class InventoryView extends GetView<InventoryController> {
                     return ListView.separated(
                       shrinkWrap: true,
                       itemCount: controller.productsList.length,
-                      separatorBuilder: (context, index) => const SizedBox(height: 8),
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 8),
                       itemBuilder: (context, index) {
                         final product = controller.productsList[index];
                         final img = product["imageUrl"] ?? "";
                         final name = product["description"] ?? "";
                         final sku = product["skuCode"] ?? "";
-                        final sizeList = product["size"] != null ? List<String>.from(product["size"]) : <String>[];
+                        final sizeList = product["size"] != null
+                            ? List<String>.from(product["size"])
+                            : <String>[];
 
                         return Container(
                           decoration: BoxDecoration(
@@ -1878,13 +2010,16 @@ class InventoryView extends GetView<InventoryController> {
                                 child: Container(
                                   width: 50,
                                   height: 50,
-                                  color: isDark ? AppColor.primary900 : const Color(0xFFE5E7EB),
+                                  color: isDark
+                                      ? AppColor.primary900
+                                      : const Color(0xFFE5E7EB),
                                   child: Image.network(
                                     ApiUrl.getFullImageUrl(img),
                                     width: 50,
                                     height: 50,
                                     fit: BoxFit.cover,
-                                    errorBuilder: (c, e, s) => Icon(Icons.image, size: 24, color: labelColor),
+                                    errorBuilder: (c, e, s) => Icon(Icons.image,
+                                        size: 24, color: labelColor),
                                   ),
                                 ),
                               ),
@@ -1905,13 +2040,15 @@ class InventoryView extends GetView<InventoryController> {
                                     ),
                                     Text(
                                       "SKU: $sku",
-                                      style: TextStyle(color: labelColor, fontSize: 12),
+                                      style: TextStyle(
+                                          color: labelColor, fontSize: 12),
                                     ),
                                     if (sizeList.isNotEmpty) ...[
                                       const SizedBox(height: 2),
                                       Text(
                                         "Sizes: ${sizeList.join(', ')}",
-                                        style: TextStyle(color: labelColor, fontSize: 11),
+                                        style: TextStyle(
+                                            color: labelColor, fontSize: 11),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                       ),
@@ -1920,15 +2057,18 @@ class InventoryView extends GetView<InventoryController> {
                                 ),
                               ),
                               IconButton(
-                                icon: const Icon(Icons.edit_outlined, color: Colors.blueAccent),
+                                icon: const Icon(Icons.edit_outlined,
+                                    color: Colors.blueAccent),
                                 onPressed: () {
                                   controller.prefillProductForm(product);
                                   _showEditProductDialog(context, product);
                                 },
                               ),
                               IconButton(
-                                icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
-                                onPressed: () => _confirmDeleteProduct(context, product),
+                                icon: const Icon(Icons.delete_outline_rounded,
+                                    color: Colors.redAccent),
+                                onPressed: () =>
+                                    _confirmDeleteProduct(context, product),
                               ),
                             ],
                           ),
@@ -1963,8 +2103,10 @@ class InventoryView extends GetView<InventoryController> {
       Obx(() {
         final bool isDark = controller.isDarkMode.value;
         final Color dialogBg = isDark ? AppColor.primary900 : Colors.white;
-        final Color textColor = isDark ? AppColor.white : const Color(0xFF1F2937);
-        final Color textSecondary = isDark ? AppColor.primary600 : const Color(0xFF4B5563);
+        final Color textColor =
+            isDark ? AppColor.white : const Color(0xFF1F2937);
+        final Color textSecondary =
+            isDark ? AppColor.primary600 : const Color(0xFF4B5563);
 
         return AlertDialog(
           backgroundColor: dialogBg,
@@ -1991,17 +2133,20 @@ class InventoryView extends GetView<InventoryController> {
                   child: SizedBox(
                     width: 20,
                     height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.redAccent),
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.redAccent),
                   ),
                 );
               }
               return ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade700),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red.shade700),
                 onPressed: () async {
                   await controller.deleteProduct(id);
                   Navigator.of(context).pop();
                 },
-                child: const Text("Delete", style: TextStyle(color: Colors.white)),
+                child:
+                    const Text("Delete", style: TextStyle(color: Colors.white)),
               );
             }),
           ],
@@ -2010,7 +2155,7 @@ class InventoryView extends GetView<InventoryController> {
     );
   }
 
-  void _showEditPartyDialog(BuildContext context, PartyModel party) {
+  void _showEditPartyDialog(BuildContext context, VendorModel party) {
     Get.dialog(
       Dialog(
         backgroundColor: Colors.transparent,
@@ -2018,8 +2163,10 @@ class InventoryView extends GetView<InventoryController> {
         child: Obx(() {
           final bool isDark = controller.isDarkMode.value;
           final Color dialogBg = isDark ? AppColor.primary900 : Colors.white;
-          final Color textColor = isDark ? AppColor.white : const Color(0xFF1F2937);
-          final Color labelColor = isDark ? AppColor.primary600 : const Color(0xFF4B5563);
+          final Color textColor =
+              isDark ? AppColor.white : const Color(0xFF1F2937);
+          final Color labelColor =
+              isDark ? AppColor.primary600 : const Color(0xFF4B5563);
 
           return Container(
             decoration: BoxDecoration(
@@ -2042,18 +2189,23 @@ class InventoryView extends GetView<InventoryController> {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
-                  _buildFormInput("Party Name*", controller.newPartyNameController),
+                  _buildFormInput(
+                      "Party Name*", controller.newVendorNameController),
                   const SizedBox(height: 12),
-                  _buildFormInput("Phone Number", controller.newPartyPhoneController, keyboardType: TextInputType.phone),
+                  _buildFormInput(
+                      "Phone Number", controller.newVendorPhoneController,
+                      keyboardType: TextInputType.phone),
                   const SizedBox(height: 12),
-                  _buildFormInput("Address", controller.newPartyAddressController),
+                  _buildFormInput(
+                      "Address", controller.newVendorAddressController),
                   const SizedBox(height: 20),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       TextButton(
                         onPressed: () => Navigator.of(context).pop(),
-                        child: Text("Cancel", style: TextStyle(color: labelColor, fontSize: 15)),
+                        child: Text("Cancel",
+                            style: TextStyle(color: labelColor, fontSize: 15)),
                       ),
                       const SizedBox(width: 12),
                       Obx(() {
@@ -2063,7 +2215,8 @@ class InventoryView extends GetView<InventoryController> {
                             child: SizedBox(
                               width: 20,
                               height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.greenAccent),
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.greenAccent),
                             ),
                           );
                         }
@@ -2075,12 +2228,16 @@ class InventoryView extends GetView<InventoryController> {
                             ),
                           ),
                           onPressed: () async {
-                            final success = await controller.editParty(party.id);
+                            final success =
+                                await controller.editVendor(party.id);
                             if (success) {
                               Navigator.of(context).pop();
                             }
                           },
-                          child: const Text("Save", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                          child: const Text("Save",
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold)),
                         );
                       }),
                     ],
@@ -2103,8 +2260,10 @@ class InventoryView extends GetView<InventoryController> {
         child: Obx(() {
           final bool isDark = controller.isDarkMode.value;
           final Color dialogBg = isDark ? AppColor.primary900 : Colors.white;
-          final Color textColor = isDark ? AppColor.white : const Color(0xFF1F2937);
-          final Color labelColor = isDark ? AppColor.primary600 : const Color(0xFF4B5563);
+          final Color textColor =
+              isDark ? AppColor.white : const Color(0xFF1F2937);
+          final Color labelColor =
+              isDark ? AppColor.primary600 : const Color(0xFF4B5563);
 
           return Container(
             decoration: BoxDecoration(
@@ -2129,18 +2288,21 @@ class InventoryView extends GetView<InventoryController> {
                   const SizedBox(height: 16),
                   _buildFormInput("SKU Code*", controller.newSkuController),
                   const SizedBox(height: 12),
-                  _buildFormInput("Product Name*", controller.newDescController),
+                  _buildFormInput(
+                      "Product Name*", controller.newDescController),
                   const SizedBox(height: 12),
                   _buildFormInput("Image URL", controller.newImgUrlController),
                   const SizedBox(height: 12),
-                  _buildFormInput("Sizes (comma separated, e.g. S,M,L)", controller.newSizesController),
+                  _buildFormInput("Sizes (comma separated, e.g. S,M,L)",
+                      controller.newSizesController),
                   const SizedBox(height: 20),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       TextButton(
                         onPressed: () => Navigator.of(context).pop(),
-                        child: Text("Cancel", style: TextStyle(color: labelColor, fontSize: 15)),
+                        child: Text("Cancel",
+                            style: TextStyle(color: labelColor, fontSize: 15)),
                       ),
                       const SizedBox(width: 12),
                       Obx(() {
@@ -2150,7 +2312,8 @@ class InventoryView extends GetView<InventoryController> {
                             child: SizedBox(
                               width: 20,
                               height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.greenAccent),
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.greenAccent),
                             ),
                           );
                         }
@@ -2167,7 +2330,10 @@ class InventoryView extends GetView<InventoryController> {
                               Navigator.of(context).pop();
                             }
                           },
-                          child: const Text("Save", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                          child: const Text("Save",
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold)),
                         );
                       }),
                     ],
@@ -2182,8 +2348,10 @@ class InventoryView extends GetView<InventoryController> {
   }
 
   void _showHistoryDialog(BuildContext context) {
+    controller.fetchStockOutList(); // Fetch stock out data when opening dialog
     final RxString query = "".obs;
     final TextEditingController localSearchCtrl = TextEditingController();
+    final RxString historyTab = 'stockIn'.obs; // 'stockIn' or 'stockOut'
 
     Get.dialog(
       Dialog(
@@ -2192,24 +2360,32 @@ class InventoryView extends GetView<InventoryController> {
         child: Obx(() {
           final bool isDark = controller.isDarkMode.value;
           final Color dialogBg = isDark ? AppColor.primary900 : Colors.white;
-          final Color textColor = isDark ? AppColor.white : const Color(0xFF1F2937);
-          final Color labelColor = isDark ? AppColor.primary600 : const Color(0xFF4B5563);
-          final Color cardBg = isDark ? AppColor.primary800 : const Color(0xFFF3F4F6);
-          final Color borderCol = isDark ? AppColor.primary800 : const Color(0xFFE5E7EB);
-          final Color searchBg = isDark ? AppColor.primary800 : const Color(0xFFF3F4F6);
-          final Color hintColor = isDark ? AppColor.primary600.withValues(alpha: 0.5) : const Color(0xFF9CA3AF);
+          final Color textColor =
+              isDark ? AppColor.white : const Color(0xFF1F2937);
+          final Color labelColor =
+              isDark ? AppColor.primary600 : const Color(0xFF4B5563);
+          final Color cardBg =
+              isDark ? AppColor.primary800 : const Color(0xFFF3F4F6);
+          final Color borderCol =
+              isDark ? AppColor.primary800 : const Color(0xFFE5E7EB);
+          final Color searchBg =
+              isDark ? AppColor.primary800 : const Color(0xFFF3F4F6);
+          final Color hintColor = isDark
+              ? AppColor.primary600.withValues(alpha: 0.5)
+              : const Color(0xFF9CA3AF);
 
-          // Get filtered and sorted list (most recent first)
-          final filteredList = controller.inventoryList.where((item) {
-            final q = query.value.toLowerCase();
+          // SAFE STRINGS & SAFE SKU FILTERING:
+          final q = query.value.toLowerCase().trim();
+          
+          // Stock In List
+          final stockInList = controller.inventoryList.where((item) {
             return item.itemName.toLowerCase().contains(q) ||
                 item.party.toLowerCase().contains(q) ||
-                (item.skuCode.toLowerCase().contains(q)) ||
-                (item.date != null && item.date!.contains(q));
+                item.skuCode.toString().toLowerCase().trim().contains(q) ||
+                (item.date != null && item.date!.toLowerCase().contains(q));
           }).toList();
-          
-          // Sort by date (descending)
-          filteredList.sort((a, b) {
+
+          stockInList.sort((a, b) {
             final dateA = a.date != null ? DateTime.tryParse(a.date!) : null;
             final dateB = b.date != null ? DateTime.tryParse(b.date!) : null;
             if (dateA == null && dateB == null) return 0;
@@ -2217,6 +2393,14 @@ class InventoryView extends GetView<InventoryController> {
             if (dateB == null) return -1;
             return dateB.compareTo(dateA);
           });
+
+          // Stock Out List
+          final stockOutList = controller.stockOutList.where((item) {
+            final sku = item['skuCode']?.toString().toLowerCase() ?? '';
+            final pty = item['party']?.toString().toLowerCase() ?? '';
+            final date = item['created_date_time']?.toString().toLowerCase() ?? '';
+            return sku.contains(q) || pty.contains(q) || date.contains(q);
+          }).toList();
 
           return Container(
             decoration: BoxDecoration(
@@ -2248,6 +2432,56 @@ class InventoryView extends GetView<InventoryController> {
                   ],
                 ),
                 const SizedBox(height: 12),
+                
+                // Tabs
+                Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => historyTab.value = 'stockIn',
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: historyTab.value == 'stockIn' ? Colors.blueAccent : searchBg,
+                            borderRadius: const BorderRadius.only(topLeft: Radius.circular(8), bottomLeft: Radius.circular(8)),
+                            border: Border.all(color: historyTab.value == 'stockIn' ? Colors.blueAccent : borderCol),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            "Stock In",
+                            style: TextStyle(
+                              color: historyTab.value == 'stockIn' ? Colors.white : textColor,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => historyTab.value = 'stockOut',
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: historyTab.value == 'stockOut' ? Colors.teal.shade700 : searchBg,
+                            borderRadius: const BorderRadius.only(topRight: Radius.circular(8), bottomRight: Radius.circular(8)),
+                            border: Border.all(color: historyTab.value == 'stockOut' ? Colors.teal.shade700 : borderCol),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            "Stock Out",
+                            style: TextStyle(
+                              color: historyTab.value == 'stockOut' ? Colors.white : textColor,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                
                 // Local Search bar
                 TextField(
                   controller: localSearchCtrl,
@@ -2258,13 +2492,17 @@ class InventoryView extends GetView<InventoryController> {
                     hintText: "Search history...",
                     hintStyle: TextStyle(color: hintColor, fontSize: 13),
                     prefixIcon: Icon(Icons.search, color: labelColor, size: 20),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     enabledBorder: OutlineInputBorder(
                       borderSide: BorderSide(color: borderCol),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     focusedBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: isDark ? AppColor.primary600 : const Color(0xFF9CA3AF)),
+                      borderSide: BorderSide(
+                          color: isDark
+                              ? AppColor.primary600
+                              : const Color(0xFF9CA3AF)),
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
@@ -2272,64 +2510,68 @@ class InventoryView extends GetView<InventoryController> {
                 ),
                 const SizedBox(height: 16),
                 Expanded(
-                  child: filteredList.isEmpty
-                      ? Center(
-                          child: Text(
-                            "No history logs found",
-                            style: TextStyle(color: labelColor, fontSize: 14),
-                          ),
-                        )
-                      : ListView.separated(
-                          shrinkWrap: true,
-                          itemCount: filteredList.length,
-                          separatorBuilder: (context, index) => const SizedBox(height: 8),
-                          itemBuilder: (context, index) {
-                            final item = filteredList[index];
-                            final String displayDate = item.date != null
-                                ? () {
-                                    try {
-                                      final dt = DateTime.parse(item.date!);
-                                      return "${dt.day.toString().padLeft(2, '0')}-${dt.month.toString().padLeft(2, '0')}-${dt.year}";
-                                    } catch (_) {
-                                      return item.date!;
-                                    }
-                                  }()
-                                : "N/A";
+                  child: historyTab.value == 'stockIn' 
+                    ? _buildStockInHistoryList(stockInList, isDark, cardBg, textColor)
+                    : _buildStockOutHistoryList(stockOutList, isDark, cardBg, textColor),
+                ),
+              ],
+            ),
+          );
+        }),
+      ),
+    );
+  }
 
-                            return Container(
-                              decoration: BoxDecoration(
-                                color: cardBg,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                              child: Row(
-                                children: [
-                                  // Index and Date Column
-                                  Expanded(
-                                    flex: 3,
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          "#${filteredList.length - index} ($displayDate)",
-                                          style: TextStyle(
-                                            color: isDark ? Colors.greenAccent : Colors.green.shade800,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          item.party,
-                                          style: TextStyle(
-                                            color: textColor,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        const SizedBox(height: 2),
+  Widget _buildStockInHistoryList(List<dynamic> filteredList, bool isDark, Color cardBg, Color textColor) {
+    if (filteredList.isEmpty) {
+      return const Center(child: Text("No Stock In history logs found", style: TextStyle(fontSize: 14)));
+    }
+    return ListView.separated(
+      shrinkWrap: true,
+      itemCount: filteredList.length,
+      separatorBuilder: (context, index) => const SizedBox(height: 8),
+      itemBuilder: (context, index) {
+        final item = filteredList[index];
+        final String displayDate = item.date != null
+            ? () {
+                try {
+                  final dt = DateTime.parse(item.date!);
+                  return "${dt.day.toString().padLeft(2, '0')}-${dt.month.toString().padLeft(2, '0')}-${dt.year}";
+                } catch (_) {
+                  return item.date!;
+                }
+              }()
+            : "N/A";
+
+        return Container(
+          decoration: BoxDecoration(
+            color: cardBg,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            children: [
+              Expanded(
+                flex: 3,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "#${filteredList.length - index} ($displayDate)",
+                      style: TextStyle(
+                        color: isDark ? Colors.greenAccent : Colors.green.shade800,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      item.party,
+                      style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 14),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
                                         Text(
                                           "${item.itemName} (${item.skuCode})",
                                           style: TextStyle(
@@ -2343,22 +2585,59 @@ class InventoryView extends GetView<InventoryController> {
                                     ),
                                   ),
                                   const SizedBox(width: 8),
-                                  // Action Buttons
                                   Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      // View Button (Green)
                                       IconButton(
-                                        icon: const Icon(Icons.visibility_rounded, color: Colors.tealAccent, size: 20),
-                                        tooltip: "View Details",
-                                        onPressed: () => _showViewItemDetailsDialog(context, item),
+                                        icon: const Icon(Icons.print_rounded,
+                                            color: Colors.amber, size: 20),
+                                        tooltip: "Print Barcode",
+                                        onPressed: () async {
+                                          try {
+                                            final pdfBytes =
+                                                await generateBarcodePdf(
+                                                    item: item);
+                                            final fileName =
+                                                "Barcode_${item.skuCode}_${DateTime.now().millisecondsSinceEpoch}.pdf";
+                                            if (kIsWeb) {
+                                              await saveAndDownloadPdf(
+                                                  pdfBytes, fileName);
+                                              AppSnacks.successSnack(
+                                                  message:
+                                                      "Barcode downloaded successfully");
+                                            } else {
+                                              final filePath =
+                                                  await saveAndDownloadPdf(
+                                                      pdfBytes, fileName);
+                                              if (filePath != null) {
+                                                Get.to(() =>
+                                                    AppPdfView(path: filePath));
+                                              }
+                                            }
+                                          } catch (e) {
+                                            AppSnacks.errorSnack(
+                                                message:
+                                                    "Failed to generate barcode");
+                                          }
+                                        },
                                       ),
-                                      // Edit Button (Blue)
                                       IconButton(
-                                        icon: const Icon(Icons.edit_rounded, color: Colors.lightBlueAccent, size: 20),
+                                        icon: const Icon(
+                                            Icons.visibility_rounded,
+                                            color: Colors.tealAccent,
+                                            size: 20),
+                                        tooltip: "View Details",
+                                        onPressed: () =>
+                                            _showViewItemDetailsDialog(
+                                                context, item),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.edit_rounded,
+                                            color: Colors.lightBlueAccent,
+                                            size: 20),
                                         tooltip: "Edit Item",
                                         onPressed: () {
-                                          Navigator.of(context).pop(); // Close History Dialog
+                                          Navigator.of(context).pop();
                                           controller.populateForm(item);
                                           _showAddEditDialog(context, item);
                                         },
@@ -2378,8 +2657,77 @@ class InventoryView extends GetView<InventoryController> {
       ),
     );
   }
+  Widget _buildStockOutHistoryList(List<dynamic> filteredList, bool isDark, Color cardBg, Color textColor) {
+    if (filteredList.isEmpty) {
+      return const Center(child: Text("No Stock Out history logs found", style: TextStyle(fontSize: 14)));
+    }
+    return ListView.separated(
+      shrinkWrap: true,
+      itemCount: filteredList.length,
+      separatorBuilder: (context, index) => const SizedBox(height: 8),
+      itemBuilder: (context, index) {
+        final item = filteredList[index];
+        final String displayDate = item['created_date_time'] != null
+            ? () {
+                try {
+                  final dt = DateTime.parse(item['created_date_time']);
+                  return "${dt.day.toString().padLeft(2, '0')}-${dt.month.toString().padLeft(2, '0')}-${dt.year}";
+                } catch (_) {
+                  return item['created_date_time'];
+                }
+              }()
+            : "N/A";
 
-  void _showViewItemDetailsDialog(BuildContext context, InventoryItemModel item) {
+        return Container(
+          decoration: BoxDecoration(
+            color: cardBg,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            children: [
+              Expanded(
+                flex: 3,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "#${filteredList.length - index} ($displayDate)",
+                      style: TextStyle(
+                        color: isDark ? Colors.redAccent : Colors.red.shade800,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      item['party'] ?? 'Unknown Party',
+                      style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 14),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      "SKU: ${item['skuCode']} | Qty Out: ${item['qtyOut']}",
+                      style: TextStyle(
+                        color: isDark ? AppColor.primary600 : const Color(0xFF4B5563),
+                        fontSize: 12,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showViewItemDetailsDialog(
+      BuildContext context, InventoryItemModel item) {
     Get.dialog(
       Dialog(
         backgroundColor: Colors.transparent,
@@ -2387,14 +2735,19 @@ class InventoryView extends GetView<InventoryController> {
         child: Obx(() {
           final bool isDark = controller.isDarkMode.value;
           final Color dialogBg = isDark ? AppColor.primary900 : Colors.white;
-          final Color textColor = isDark ? AppColor.white : const Color(0xFF1F2937);
-          final Color labelColor = isDark ? AppColor.primary600 : const Color(0xFF4B5563);
-          final Color cardBg = isDark ? AppColor.primary800 : const Color(0xFFF3F4F6);
-          final Color borderCol = isDark ? AppColor.primary800 : const Color(0xFFE5E7EB);
-          final Color textSecondary = isDark ? AppColor.primary600 : const Color(0xFF6B7280);
+          final Color textColor =
+              isDark ? AppColor.white : const Color(0xFF1F2937);
+          final Color labelColor =
+              isDark ? AppColor.primary600 : const Color(0xFF4B5563);
+          final Color cardBg =
+              isDark ? AppColor.primary800 : const Color(0xFFF3F4F6);
+          final Color borderCol =
+              isDark ? AppColor.primary800 : const Color(0xFFE5E7EB);
+          final Color textSecondary =
+              isDark ? AppColor.primary600 : const Color(0xFF6B7280);
 
           final double totalCost = item.qty * item.purchasePrice;
-          
+
           final String displayDate = item.date != null
               ? () {
                   try {
@@ -2435,22 +2788,22 @@ class InventoryView extends GetView<InventoryController> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                
-                // Vendor Header
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: isDark ? AppColor.primary800 : Colors.green.shade50,
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                      color: isDark ? AppColor.primary600 : Colors.green.shade100,
+                      color:
+                          isDark ? AppColor.primary600 : Colors.green.shade100,
                     ),
                   ),
                   child: Row(
                     children: [
                       Icon(
                         Icons.business_rounded,
-                        color: isDark ? Colors.greenAccent : Colors.green.shade700,
+                        color:
+                            isDark ? Colors.greenAccent : Colors.green.shade700,
                         size: 24,
                       ),
                       const SizedBox(width: 12),
@@ -2481,8 +2834,6 @@ class InventoryView extends GetView<InventoryController> {
                   ),
                 ),
                 const SizedBox(height: 16),
-
-                // Date and Product Card
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -2498,23 +2849,35 @@ class InventoryView extends GetView<InventoryController> {
                         children: [
                           Text(
                             "Delivery Date:",
-                            style: TextStyle(color: labelColor, fontSize: 13, fontWeight: FontWeight.w600),
+                            style: TextStyle(
+                                color: labelColor,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600),
                           ),
                           Text(
                             displayDate,
-                            style: TextStyle(color: textColor, fontSize: 13, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                                color: textColor,
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
                       const Divider(height: 20, thickness: 0.5),
                       Text(
                         "Product Description:",
-                        style: TextStyle(color: labelColor, fontSize: 12, fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                            color: labelColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         item.itemName,
-                        style: TextStyle(color: textColor, fontSize: 15, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            color: textColor,
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 10),
                       Row(
@@ -2523,15 +2886,30 @@ class InventoryView extends GetView<InventoryController> {
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text("SKU Code", style: TextStyle(color: labelColor, fontSize: 11)),
-                              Text(item.skuCode.isNotEmpty ? item.skuCode : "N/A", style: TextStyle(color: textColor, fontSize: 13, fontWeight: FontWeight.bold)),
+                              Text("SKU Code",
+                                  style: TextStyle(
+                                      color: labelColor, fontSize: 11)),
+                              Text(
+                                  item.skuCode.isNotEmpty
+                                      ? item.skuCode
+                                      : "N/A",
+                                  style: TextStyle(
+                                      color: textColor,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold)),
                             ],
                           ),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              Text("Size", style: TextStyle(color: labelColor, fontSize: 11)),
-                              Text(item.size, style: TextStyle(color: textColor, fontSize: 13, fontWeight: FontWeight.bold)),
+                              Text("Size",
+                                  style: TextStyle(
+                                      color: labelColor, fontSize: 11)),
+                              Text(item.size,
+                                  style: TextStyle(
+                                      color: textColor,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold)),
                             ],
                           ),
                         ],
@@ -2540,8 +2918,6 @@ class InventoryView extends GetView<InventoryController> {
                   ),
                 ),
                 const SizedBox(height: 16),
-
-                // Financials & Stock Breakdown Table
                 Container(
                   decoration: BoxDecoration(
                     color: cardBg,
@@ -2550,13 +2926,30 @@ class InventoryView extends GetView<InventoryController> {
                   ),
                   child: Column(
                     children: [
-                      _buildDetailRow("Quantity Delivered", "${item.qty} units", textColor, labelColor),
+                      _buildDetailRow("Quantity Delivered", "${item.qty} units",
+                          textColor, labelColor),
                       const Divider(height: 1, thickness: 0.5),
-                      _buildDetailRow("Purchase Price", "₹${item.purchasePrice.toStringAsFixed(2)}", textColor, labelColor),
+                      _buildDetailRow(
+                          "Purchase Price",
+                          "₹${item.purchasePrice.toStringAsFixed(2)}",
+                          textColor,
+                          labelColor),
                       const Divider(height: 1, thickness: 0.5),
-                      _buildDetailRow("Total Cost", "₹${totalCost.toStringAsFixed(2)}", isDark ? Colors.greenAccent : Colors.green.shade800, labelColor, isBoldVal: true),
+                      _buildDetailRow(
+                          "Total Cost",
+                          "₹${totalCost.toStringAsFixed(2)}",
+                          isDark ? Colors.greenAccent : Colors.green.shade800,
+                          labelColor,
+                          isBoldVal: true),
                       const Divider(height: 1, thickness: 0.5),
-                      _buildDetailRow("Remaining Stock", "${item.currentlyAvailableStock} units", item.currentlyAvailableStock > 0 ? Colors.cyanAccent : Colors.redAccent, labelColor, isBoldVal: true),
+                      _buildDetailRow(
+                          "Remaining Stock",
+                          "${item.currentlyAvailableStock} units",
+                          item.currentlyAvailableStock > 0
+                              ? Colors.cyanAccent
+                              : Colors.redAccent,
+                          labelColor,
+                          isBoldVal: true),
                     ],
                   ),
                 ),
@@ -2572,7 +2965,10 @@ class InventoryView extends GetView<InventoryController> {
                   onPressed: () => Navigator.of(context).pop(),
                   child: const Text(
                     "Close",
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16),
                   ),
                 ),
               ],
@@ -2583,7 +2979,9 @@ class InventoryView extends GetView<InventoryController> {
     );
   }
 
-  Widget _buildDetailRow(String label, String value, Color valColor, Color labelColor, {bool isBoldVal = false}) {
+  Widget _buildDetailRow(
+      String label, String value, Color valColor, Color labelColor,
+      {bool isBoldVal = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
@@ -2591,7 +2989,8 @@ class InventoryView extends GetView<InventoryController> {
         children: [
           Text(
             label,
-            style: TextStyle(color: labelColor, fontSize: 13, fontWeight: FontWeight.w500),
+            style: TextStyle(
+                color: labelColor, fontSize: 13, fontWeight: FontWeight.w500),
           ),
           Text(
             value,
@@ -2605,4 +3004,373 @@ class InventoryView extends GetView<InventoryController> {
       ),
     );
   }
+
+  void _showManageNewPartiesDialog(BuildContext context) {
+    Get.dialog(
+      Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        child: Obx(() {
+          final bool isDark = controller.isDarkMode.value;
+          final Color dialogBg = isDark ? AppColor.primary900 : Colors.white;
+          final Color textColor =
+              isDark ? AppColor.white : const Color(0xFF1F2937);
+          final Color labelColor =
+              isDark ? AppColor.primary600 : const Color(0xFF4B5563);
+          final Color cardBg =
+              isDark ? AppColor.primary800 : const Color(0xFFF3F4F6);
+
+          return Container(
+            decoration: BoxDecoration(
+              color: dialogBg,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            padding: const EdgeInsets.all(20),
+            width: double.infinity,
+            constraints: const BoxConstraints(maxHeight: 500),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      "Manage Parties",
+                      style: TextStyle(
+                        color: textColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green.shade700,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                      ),
+                      onPressed: () => _showAddNewPartyDialog(context),
+                      icon:
+                          const Icon(Icons.add, color: Colors.white, size: 18),
+                      label: const Text("Add",
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: Obx(() {
+                    if (controller.newPartiesList.isEmpty) {
+                      return Center(
+                        child: Text(
+                          "No parties found",
+                          style: TextStyle(color: labelColor, fontSize: 14),
+                        ),
+                      );
+                    }
+                    return ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: controller.newPartiesList.length,
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 8),
+                      itemBuilder: (context, index) {
+                        final party = controller.newPartiesList[index];
+                        return Container(
+                          decoration: BoxDecoration(
+                            color: cardBg,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      party.name,
+                                      style: TextStyle(
+                                        color: textColor,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    if (party.phone.isNotEmpty) ...[
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        "Phone: ${party.phone}",
+                                        style: TextStyle(
+                                            color: labelColor, fontSize: 12),
+                                      ),
+                                    ],
+                                    if (party.address.isNotEmpty) ...[
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        "Address: ${party.address}",
+                                        style: TextStyle(
+                                            color: labelColor, fontSize: 12),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline_rounded,
+                                    color: Colors.redAccent),
+                                onPressed: () {
+                                  controller.deleteNewParty(party.id);
+                                },
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    );
+                  }),
+                ),
+                const SizedBox(height: 16),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: Text(
+                      "Close",
+                      style: TextStyle(color: labelColor, fontSize: 16),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  void _showAddNewPartyDialog(BuildContext context) {
+    final TextEditingController nameController = TextEditingController();
+    final TextEditingController phoneController = TextEditingController();
+    final TextEditingController addressController = TextEditingController();
+
+    Get.dialog(
+      Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        child: Obx(() {
+          final bool isDark = controller.isDarkMode.value;
+          final Color dialogBg = isDark ? AppColor.primary900 : Colors.white;
+          final Color textColor =
+              isDark ? AppColor.white : const Color(0xFF1F2937);
+          final Color labelColor =
+              isDark ? AppColor.primary600 : const Color(0xFF4B5563);
+
+          return Container(
+            decoration: BoxDecoration(
+              color: dialogBg,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            padding: const EdgeInsets.all(20),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    "Add New Party",
+                    style: TextStyle(
+                      color: textColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildFormInput("Party Name*", nameController),
+                  const SizedBox(height: 12),
+                  _buildFormInput("Phone Number", phoneController,
+                      keyboardType: TextInputType.phone),
+                  const SizedBox(height: 12),
+                  _buildFormInput("Address", addressController),
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: Text("Cancel",
+                            style: TextStyle(color: labelColor, fontSize: 15)),
+                      ),
+                      const SizedBox(width: 12),
+                      Obx(() {
+                        if (controller.isActionLoading.value) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16),
+                            child: SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.greenAccent),
+                            ),
+                          );
+                        }
+                        return ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green.shade700,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          onPressed: () async {
+                            final success = await controller.addNewParty(
+                              nameController.text,
+                              phoneController.text,
+                              addressController.text,
+                            );
+                            if (success) {
+                              Navigator.of(context).pop();
+                            }
+                          },
+                          child: const Text("Save",
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold)),
+                        );
+                      }),
+                    ],
+                  )
+                ],
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  void _showReportDateSelection(BuildContext context) {
+    DateTime startDate = DateTime.now();
+    DateTime endDate = DateTime.now();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final isDark = controller.isDarkMode.value;
+            final textColor = isDark ? Colors.white : Colors.black87;
+
+            return AlertDialog(
+              backgroundColor: isDark ? AppColor.primary800 : Colors.white,
+              title: Text("Select Report Date Range", style: TextStyle(color: textColor)),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextButton.icon(
+                          icon: Icon(Icons.calendar_today, color: textColor),
+                          label: Text("${startDate.day}-${startDate.month}-${startDate.year}", style: TextStyle(color: textColor)),
+                          onPressed: () async {
+                            DateTime? picked = await showDatePicker(
+                              context: context,
+                              initialDate: startDate,
+                              firstDate: DateTime(2000),
+                              lastDate: DateTime(2101),
+                            );
+                            if (picked != null) {
+                              setDialogState(() {
+                                startDate = picked;
+                                if (endDate.isBefore(startDate)) {
+                                  endDate = startDate;
+                                }
+                              });
+                            }
+                          },
+                        ),
+                      ),
+                      Text(" to ", style: TextStyle(color: textColor)),
+                      Expanded(
+                        child: TextButton.icon(
+                          icon: Icon(Icons.calendar_today, color: textColor),
+                          label: Text("${endDate.day}-${endDate.month}-${endDate.year}", style: TextStyle(color: textColor)),
+                          onPressed: () async {
+                            DateTime? picked = await showDatePicker(
+                              context: context,
+                              initialDate: endDate,
+                              firstDate: startDate,
+                              lastDate: DateTime(2101),
+                            );
+                            if (picked != null) {
+                              setDialogState(() {
+                                endDate = picked;
+                              });
+                            }
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text("Cancel", style: TextStyle(color: isDark ? Colors.white70 : Colors.black54)),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: AppColor.primary600),
+                  onPressed: () async {
+                    Navigator.pop(context);
+                    
+                    // Show loading
+                    Get.dialog(
+                      const Center(child: CircularProgressIndicator()),
+                      barrierDismissible: false
+                    );
+                    
+                    try {
+                      var response = await controller.apiRepository.getInventoryReport(
+                        startDate.toIso8601String(), 
+                        endDate.toIso8601String()
+                      );
+                      
+                      // Generate PDF
+                      final Uint8List pdfData = await generateInventoryReportPdf(
+                        reportData: response,
+                        startDate: startDate,
+                        endDate: endDate,
+                      );
+                      
+                      Get.back(); // close loading
+                      
+                      Get.to(() => AppPdfView(
+                        bytes: pdfData,
+                        pdfName: "Inventory_Report_${startDate.day}-${startDate.month}-${startDate.year}",
+                      ));
+                    } catch (e) {
+                      Get.back(); // close loading
+                      AppSnacks.errorSnack(message: "Failed to generate report: $e");
+                    }
+                  },
+                  child: const Text("Generate Report", style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
 }
+

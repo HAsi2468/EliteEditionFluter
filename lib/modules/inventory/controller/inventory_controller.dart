@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:elite_edition/data/api_repository.dart';
 import 'package:elite_edition/modules/inventory/model/inventory_item_model.dart';
+import 'package:elite_edition/modules/inventory/model/vendor_model.dart';
 import 'package:elite_edition/modules/inventory/model/party_model.dart';
 import 'package:elite_edition/shared_widget/app_snacks.dart';
 
@@ -14,6 +15,7 @@ class InventoryController extends GetxController {
 
   RxBool isLoading = false.obs;
   RxList<InventoryItemModel> inventoryList = RxList();
+  RxList<dynamic> stockOutList = RxList();
   RxString searchQuery = "".obs;
 
   RxBool get isDarkMode => Get.find<ThemeController>().isDarkMode;
@@ -26,7 +28,23 @@ class InventoryController extends GetxController {
   ///   skuCode, itemName, imageUrl, totalStock, totalQty, entries (List<InventoryItemModel>)
   List<Map<String, dynamic>> get groupedBySku {
     final Map<String, Map<String, dynamic>> grouped = {};
-    for (final item in inventoryList) {
+
+    // CRITICAL FIX: Explicitly access searchQuery.value here so Obx knows to track changes!
+    final query = searchQuery.value.toLowerCase().trim();
+
+    // Filter the internal inventory list locally based on your search fields
+    final filteredList = inventoryList.where((item) {
+      if (query.isEmpty) return true;
+
+      final matchesName = item.itemName.toLowerCase().contains(query);
+      final matchesParty = item.party.toLowerCase().contains(query);
+      final matchesSku =
+          item.skuCode.toString().toLowerCase().trim().contains(query);
+
+      return matchesName || matchesParty || matchesSku;
+    }).toList();
+
+    for (final item in filteredList) {
       final key = item.skuCode.isNotEmpty ? item.skuCode : item.itemName;
       if (!grouped.containsKey(key)) {
         grouped[key] = {
@@ -40,8 +58,7 @@ class InventoryController extends GetxController {
       }
       grouped[key]!['totalStock'] =
           (grouped[key]!['totalStock'] as int) + item.currentlyAvailableStock;
-      grouped[key]!['totalQty'] =
-          (grouped[key]!['totalQty'] as int) + item.qty;
+      grouped[key]!['totalQty'] = (grouped[key]!['totalQty'] as int) + item.qty;
       (grouped[key]!['entries'] as List<InventoryItemModel>).add(item);
     }
     return grouped.values.toList();
@@ -52,12 +69,13 @@ class InventoryController extends GetxController {
   }
 
   // Catalog list options
-  RxList<PartyModel> partiesList = RxList();
+  RxList<VendorModel> vendorsList = RxList();
+  RxList<PartyModel> newPartiesList = RxList();
   RxList<dynamic> productsList = RxList();
   RxList<String> sizeOptionsList = RxList();
 
   // Selection states
-  RxString selectedParty = "".obs;
+  RxString selectedVendor = "".obs;
   RxString selectedSkuCode = "".obs;
   RxString selectedImageUrl = "".obs;
   RxString selectedSize = "".obs;
@@ -71,9 +89,10 @@ class InventoryController extends GetxController {
   final TextEditingController qtyController = TextEditingController();
 
   // Inline Party Form Controllers
-  final TextEditingController newPartyNameController = TextEditingController();
-  final TextEditingController newPartyPhoneController = TextEditingController();
-  final TextEditingController newPartyAddressController = TextEditingController();
+  final TextEditingController newVendorNameController = TextEditingController();
+  final TextEditingController newVendorPhoneController = TextEditingController();
+  final TextEditingController newVendorAddressController =
+      TextEditingController();
 
   // Inline Product Form Controllers
   final TextEditingController newSkuController = TextEditingController();
@@ -87,7 +106,8 @@ class InventoryController extends GetxController {
   void onInit() {
     super.onInit();
     fetchInventory();
-    fetchParties();
+    fetchVendors();
+    fetchNewParties();
     fetchProducts();
     qtyController.addListener(() {
       if (!isEditMode.value) {
@@ -103,9 +123,9 @@ class InventoryController extends GetxController {
     salePriceController.dispose();
     purchasePriceController.dispose();
     qtyController.dispose();
-    newPartyNameController.dispose();
-    newPartyPhoneController.dispose();
-    newPartyAddressController.dispose();
+    newVendorNameController.dispose();
+    newVendorPhoneController.dispose();
+    newVendorAddressController.dispose();
     newSkuController.dispose();
     newDescController.dispose();
     newImgUrlController.dispose();
@@ -117,13 +137,13 @@ class InventoryController extends GetxController {
   void clearForm() {
     isEditMode.value = false;
     stagedItems.clear();
-    selectedParty.value = "";
+    selectedVendor.value = "";
     selectedSkuCode.value = "";
     selectedImageUrl.value = "";
     selectedSize.value = "";
     sizeOptionsList.clear();
     selectedDate.value = DateTime.now();
-    
+
     itemNameController.clear();
     stockController.clear();
     salePriceController.clear();
@@ -133,7 +153,7 @@ class InventoryController extends GetxController {
 
   void populateForm(InventoryItemModel item) {
     isEditMode.value = true;
-    selectedParty.value = item.party;
+    selectedVendor.value = item.party;
     itemNameController.text = item.itemName;
     selectedSkuCode.value = item.skuCode;
     selectedImageUrl.value = item.imageUrl;
@@ -141,7 +161,11 @@ class InventoryController extends GetxController {
     salePriceController.text = item.salePrice.toString();
     purchasePriceController.text = item.purchasePrice.toString();
     qtyController.text = item.qty.toString();
-    selectedDate.value = item.date != null ? DateTime.parse(item.date!) : (item.createdDateTime != null ? DateTime.parse(item.createdDateTime!) : DateTime.now());
+    selectedDate.value = item.date != null
+        ? DateTime.parse(item.date!)
+        : (item.createdDateTime != null
+            ? DateTime.parse(item.createdDateTime!)
+            : DateTime.now());
 
     // Populate sizes list based on product SKU if found
     sizeOptionsList.clear();
@@ -154,7 +178,7 @@ class InventoryController extends GetxController {
         sizeOptionsList.value = List<String>.from(product["size"]);
       }
     }
-    
+
     // Ensure current size is in sizeOptionsList as fallback
     if (item.size.isNotEmpty && !sizeOptionsList.contains(item.size)) {
       sizeOptionsList.add(item.size);
@@ -169,7 +193,7 @@ class InventoryController extends GetxController {
       if (searchQuery.value.isNotEmpty) {
         params["search"] = searchQuery.value;
       }
-      
+
       var res = await apiRepository.getInventoryList(params, isLog: false);
       if (res != false && res != null) {
         var list = List<InventoryItemModel>.from(
@@ -177,19 +201,30 @@ class InventoryController extends GetxController {
         inventoryList.value = list;
       }
     } catch (e) {
-      print("Error fetching inventory: $e");
+      debugPrint("Error fetching inventory: $e");
     } finally {
       isLoading.value = false;
     }
   }
 
-  Future<void> fetchParties() async {
+  Future<void> fetchStockOutList() async {
     try {
-      var res = await apiRepository.getPartyList(null, isLog: false);
+      var res = await apiRepository.getStockOut();
       if (res != false && res != null) {
-        var list = List<PartyModel>.from(
-            res.map((x) => PartyModel.fromJson(x)));
-        partiesList.value = list;
+        stockOutList.value = List<dynamic>.from(res);
+      }
+    } catch (e) {
+      debugPrint("Error fetching stock out list: $e");
+    }
+  }
+
+  Future<void> fetchVendors() async {
+    try {
+      var res = await apiRepository.getVendorList(null, isLog: false);
+      if (res != false && res != null) {
+        var list =
+            List<VendorModel>.from(res.map((x) => VendorModel.fromJson(x)));
+        vendorsList.value = list;
       }
     } catch (e) {
       print("Error fetching parties: $e");
@@ -198,8 +233,8 @@ class InventoryController extends GetxController {
 
   Future<void> fetchProducts() async {
     try {
-      // Fetch products with a high limit to get all database options
-      var res = await apiRepository.getProductList({"limit": "200"}, isLog: false);
+      var res =
+          await apiRepository.getProductList({"limit": "200"}, isLog: false);
       if (res != false && res != null) {
         productsList.value = List<dynamic>.from(res);
       }
@@ -208,8 +243,8 @@ class InventoryController extends GetxController {
     }
   }
 
-  Future<bool> addParty() async {
-    final name = newPartyNameController.text.trim();
+  Future<bool> addVendor() async {
+    final name = newVendorNameController.text.trim();
     if (name.isEmpty) {
       AppSnacks.errorSnack(message: "Party name is required.");
       return false;
@@ -220,19 +255,20 @@ class InventoryController extends GetxController {
 
       final Map<String, dynamic> body = {
         "name": name,
-        "phone": newPartyPhoneController.text.trim(),
-        "address": newPartyAddressController.text.trim(),
+        "phone": newVendorPhoneController.text.trim(),
+        "address": newVendorAddressController.text.trim(),
       };
 
-      var res = await apiRepository.createParty(body);
+      var res = await apiRepository.createVendor(body);
 
       if (res != false) {
         AppSnacks.successSnack(message: "Party '$name' added successfully.");
-        newPartyNameController.clear();
-        newPartyPhoneController.clear();
-        newPartyAddressController.clear();
-        await fetchParties();
-        selectedParty.value = name;
+        newVendorNameController.clear();
+        newVendorPhoneController.clear();
+        newVendorAddressController.clear();
+        await fetchVendors();
+    fetchNewParties();
+        selectedVendor.value = name;
         return true;
       }
     } catch (e) {
@@ -248,7 +284,7 @@ class InventoryController extends GetxController {
     itemNameController.text = product["description"] ?? "";
     selectedSkuCode.value = product["skuCode"] ?? "";
     selectedImageUrl.value = product["imageUrl"] ?? "";
-    
+
     sizeOptionsList.clear();
     if (product["size"] != null) {
       sizeOptionsList.value = List<String>.from(product["size"]);
@@ -261,7 +297,7 @@ class InventoryController extends GetxController {
   }
 
   Future<bool> addInventoryItem() async {
-    if (selectedParty.value.trim().isEmpty ||
+    if (selectedVendor.value.trim().isEmpty ||
         itemNameController.text.trim().isEmpty ||
         selectedSize.value.trim().isEmpty) {
       AppSnacks.errorSnack(message: "Party, Item Name, and Size are required.");
@@ -272,12 +308,14 @@ class InventoryController extends GetxController {
       isActionLoading.value = true;
 
       final Map<String, dynamic> body = {
-        "party": selectedParty.value.trim(),
+        "party": selectedVendor.value.trim(),
         "itemName": itemNameController.text.trim(),
         "size": selectedSize.value.trim(),
-        "currentlyAvailableStock": int.tryParse(stockController.text.trim()) ?? 0,
+        "currentlyAvailableStock":
+            int.tryParse(stockController.text.trim()) ?? 0,
         "salePrice": double.tryParse(salePriceController.text.trim()) ?? 0.0,
-        "purchasePrice": double.tryParse(purchasePriceController.text.trim()) ?? 0.0,
+        "purchasePrice":
+            double.tryParse(purchasePriceController.text.trim()) ?? 0.0,
         "qty": int.tryParse(qtyController.text.trim()) ?? 0,
         "imageUrl": selectedImageUrl.value,
         "skuCode": selectedSkuCode.value,
@@ -301,10 +339,10 @@ class InventoryController extends GetxController {
   }
 
   Future<bool> updateInventoryItem(String id) async {
-    if (selectedParty.value.trim().isEmpty ||
+    if (selectedVendor.value.trim().isEmpty ||
         itemNameController.text.trim().isEmpty ||
         selectedSize.value.trim().isEmpty) {
-      AppSnacks.errorSnack(message: "Party, Item Name, and Size are required.");
+      AppSnacks.errorSnack(message: "Vendor, Item Name, and Size are required.");
       return false;
     }
 
@@ -312,12 +350,14 @@ class InventoryController extends GetxController {
       isActionLoading.value = true;
 
       final Map<String, dynamic> body = {
-        "party": selectedParty.value.trim(),
+        "party": selectedVendor.value.trim(),
         "itemName": itemNameController.text.trim(),
         "size": selectedSize.value.trim(),
-        "currentlyAvailableStock": int.tryParse(stockController.text.trim()) ?? 0,
+        "currentlyAvailableStock":
+            int.tryParse(stockController.text.trim()) ?? 0,
         "salePrice": double.tryParse(salePriceController.text.trim()) ?? 0.0,
-        "purchasePrice": double.tryParse(purchasePriceController.text.trim()) ?? 0.0,
+        "purchasePrice":
+            double.tryParse(purchasePriceController.text.trim()) ?? 0.0,
         "qty": int.tryParse(qtyController.text.trim()) ?? 0,
         "imageUrl": selectedImageUrl.value,
         "skuCode": selectedSkuCode.value,
@@ -357,6 +397,7 @@ class InventoryController extends GetxController {
     }
   }
 
+  // CRITICAL FIX: Update the searchQuery value field directly inside this method!
   void onSearchChanged(String val) {
     searchQuery.value = val;
     fetchInventory();
@@ -389,8 +430,7 @@ class InventoryController extends GetxController {
         newImgUrlController.clear();
         newSizesController.clear();
         await fetchProducts();
-        
-        // Auto-select the newly created product
+
         final createdProduct = productsList.firstWhere(
           (p) => p["skuCode"] == sku,
           orElse: () => null,
@@ -408,14 +448,36 @@ class InventoryController extends GetxController {
     return false;
   }
 
-  Future<void> deleteParty(String id) async {
+  Future<void> syncProductsFromSaleOrders() async {
     try {
       isActionLoading.value = true;
-      var res = await apiRepository.deleteParty(id);
+      var res = await apiRepository.syncMissingProducts();
+      
+      if (res != null) {
+        String msg = res["message"] ?? "Sync process started.";
+        AppSnacks.successSnack(message: msg);
+        // The background process may take time, but we can re-fetch anyway.
+        await fetchProducts();
+      } else {
+        AppSnacks.errorSnack(message: "Failed to start sync process.");
+      }
+    } catch (e) {
+      print("Error syncing products: $e");
+      AppSnacks.errorSnack(message: "Error syncing products.");
+    } finally {
+      isActionLoading.value = false;
+    }
+  }
+
+  Future<void> deleteVendor(String id) async {
+    try {
+      isActionLoading.value = true;
+      var res = await apiRepository.deleteVendor(id);
       if (res != false) {
         AppSnacks.successSnack(message: "Party deleted successfully.");
-        await fetchParties();
-        selectedParty.value = "";
+        await fetchVendors();
+    fetchNewParties();
+        selectedVendor.value = "";
       }
     } catch (e) {
       print("Error deleting party: $e");
@@ -424,14 +486,14 @@ class InventoryController extends GetxController {
     }
   }
 
-  void prefillPartyForm(PartyModel party) {
-    newPartyNameController.text = party.name;
-    newPartyPhoneController.text = party.phone;
-    newPartyAddressController.text = party.address;
+  void prefillVendorForm(VendorModel party) {
+    newVendorNameController.text = party.name;
+    newVendorPhoneController.text = party.phone;
+    newVendorAddressController.text = party.address;
   }
 
-  Future<bool> editParty(String id) async {
-    final name = newPartyNameController.text.trim();
+  Future<bool> editVendor(String id) async {
+    final name = newVendorNameController.text.trim();
     if (name.isEmpty) {
       AppSnacks.errorSnack(message: "Party name is required.");
       return false;
@@ -442,18 +504,19 @@ class InventoryController extends GetxController {
 
       final Map<String, dynamic> body = {
         "name": name,
-        "phone": newPartyPhoneController.text.trim(),
-        "address": newPartyAddressController.text.trim(),
+        "phone": newVendorPhoneController.text.trim(),
+        "address": newVendorAddressController.text.trim(),
       };
 
-      var res = await apiRepository.updateParty(id, body);
+      var res = await apiRepository.updateVendor(id, body);
 
       if (res != false) {
         AppSnacks.successSnack(message: "Party updated successfully.");
-        newPartyNameController.clear();
-        newPartyPhoneController.clear();
-        newPartyAddressController.clear();
-        await fetchParties();
+        newVendorNameController.clear();
+        newVendorPhoneController.clear();
+        newVendorAddressController.clear();
+        await fetchVendors();
+    fetchNewParties();
         return true;
       }
     } catch (e) {
@@ -468,7 +531,9 @@ class InventoryController extends GetxController {
     newSkuController.text = product["skuCode"] ?? "";
     newDescController.text = product["description"] ?? "";
     newImgUrlController.text = product["imageUrl"] ?? "";
-    final sizeList = product["size"] != null ? List<String>.from(product["size"]) : <String>[];
+    final sizeList = product["size"] != null
+        ? List<String>.from(product["size"])
+        : <String>[];
     newSizesController.text = sizeList.join(', ');
   }
 
@@ -527,20 +592,22 @@ class InventoryController extends GetxController {
   }
 
   void stageCurrentItem() {
-    if (selectedParty.value.trim().isEmpty ||
+    if (selectedVendor.value.trim().isEmpty ||
         itemNameController.text.trim().isEmpty ||
         selectedSize.value.trim().isEmpty) {
-      AppSnacks.errorSnack(message: "Party, Item Name, and Size are required to stage.");
+      AppSnacks.errorSnack(
+           message: "Vendor, Item Name, and Size are required for all staged items.");
       return;
     }
 
     final item = {
-      "party": selectedParty.value.trim(),
+      "party": selectedVendor.value.trim(),
       "itemName": itemNameController.text.trim(),
       "size": selectedSize.value.trim(),
       "currentlyAvailableStock": int.tryParse(stockController.text.trim()) ?? 0,
       "salePrice": double.tryParse(salePriceController.text.trim()) ?? 0.0,
-      "purchasePrice": double.tryParse(purchasePriceController.text.trim()) ?? 0.0,
+      "purchasePrice":
+          double.tryParse(purchasePriceController.text.trim()) ?? 0.0,
       "qty": int.tryParse(qtyController.text.trim()) ?? 0,
       "imageUrl": selectedImageUrl.value,
       "skuCode": selectedSkuCode.value,
@@ -548,13 +615,12 @@ class InventoryController extends GetxController {
     };
 
     stagedItems.add(item);
-    
-    // Clear item inputs but preserve party/vendor selection for faster entry
+
     selectedSkuCode.value = "";
     selectedImageUrl.value = "";
     selectedSize.value = "";
     sizeOptionsList.clear();
-    
+
     itemNameController.clear();
     stockController.clear();
     salePriceController.clear();
@@ -569,11 +635,13 @@ class InventoryController extends GetxController {
 
     try {
       isActionLoading.value = true;
-      
-      var res = await apiRepository.createInventory(List<Map<String, dynamic>>.from(stagedItems));
+
+      var res = await apiRepository
+          .createInventory(List<Map<String, dynamic>>.from(stagedItems));
 
       if (res != false) {
-        AppSnacks.successSnack(message: "All staged inventory items added successfully.");
+        AppSnacks.successSnack(
+            message: "All staged inventory items added successfully.");
         clearForm();
         fetchInventory();
         return true;
@@ -585,4 +653,96 @@ class InventoryController extends GetxController {
     }
     return false;
   }
+
+  Future<void> fetchNewParties() async {
+    try {
+      var res = await apiRepository.getPartyList(null, isLog: false);
+      if (res != false && res != null) {
+        var list = List<PartyModel>.from(res.map((x) => PartyModel.fromJson(x)));
+        newPartiesList.value = list;
+      }
+    } catch (e) {
+      print("Error fetching new parties: $e");
+    }
+  }
+
+  Future<bool> addNewParty(String name, String phone, String address) async {
+    try {
+      isActionLoading.value = true;
+      var res = await apiRepository.createParty({
+        "name": name,
+        "phone": phone,
+        "address": address,
+      });
+      if (res != false) {
+        AppSnacks.successSnack(message: "Party added successfully.");
+        await fetchNewParties();
+        return true;
+      }
+    } catch (e) {
+      print("Error adding party: $e");
+    } finally {
+      isActionLoading.value = false;
+    }
+    return false;
+  }
+
+  Future<bool> editNewParty(String id, String name, String phone, String address) async {
+    try {
+      isActionLoading.value = true;
+      var res = await apiRepository.updateParty(id, {
+        "name": name,
+        "phone": phone,
+        "address": address,
+      });
+      if (res != false) {
+        AppSnacks.successSnack(message: "Party updated successfully.");
+        await fetchNewParties();
+        return true;
+      }
+    } catch (e) {
+      print("Error updating party: $e");
+    } finally {
+      isActionLoading.value = false;
+    }
+    return false;
+  }
+
+  Future<void> deleteNewParty(String id) async {
+    try {
+      isActionLoading.value = true;
+      var res = await apiRepository.deleteParty(id);
+      if (res != false) {
+        AppSnacks.successSnack(message: "Party deleted successfully.");
+        await fetchNewParties();
+      }
+    } catch (e) {
+      print("Error deleting party: $e");
+    } finally {
+      isActionLoading.value = false;
+    }
+  }
+
+  Future<bool> submitStockOut(String skuCode, String party, {int qtyOut = 1}) async {
+    try {
+      isActionLoading.value = true;
+      var res = await apiRepository.createStockOut({
+        "skuCode": skuCode,
+        "party": party,
+        "qtyOut": qtyOut,
+      });
+      if (res != false) {
+        AppSnacks.successSnack(message: "Stock out successful.");
+        fetchInventory(); // Refresh stock
+        return true;
+      }
+    } catch (e) {
+      AppSnacks.errorSnack(message: "Not enough stock or item not found.");
+      print("Error submitting stock out: $e");
+    } finally {
+      isActionLoading.value = false;
+    }
+    return false;
+  }
 }
+

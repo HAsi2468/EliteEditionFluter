@@ -77,6 +77,36 @@ class LoginView extends StatelessWidget {
                     "Don't have account, Register!",
                   ),
                 ),
+                const SizedBox(
+                  height: 50,
+                ),
+                Text.rich(
+                  TextSpan(
+                    text: "Powered by ",
+                    children: [
+                      const TextSpan(
+                        text: "❤️ ",
+                        style: TextStyle(color: Color(0xFFDB372D)),
+                      ),
+                      TextSpan(
+                        text: "HASI",
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: AppColor.primary900,
+                        ),
+                      ),
+                      const TextSpan(
+                        text: " ❤️",
+                        style: TextStyle(color: Color(0xFFDB372D)),
+                      ),
+                    ],
+                  ),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: AppColor.primary900,
+                    fontSize: 15,
+                  ),
+                ),
               ],
             ),
           ),

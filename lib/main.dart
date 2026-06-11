@@ -1,4 +1,3 @@
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:elite_edition/bindings/initial_binding.dart';
@@ -42,4 +41,3 @@ class MyApp extends StatelessWidget {
     });
   }
 }
-

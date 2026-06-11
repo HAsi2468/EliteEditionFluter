@@ -1,6 +1,6 @@
-import 'dart:typed_data';
 
 import 'package:flutter/services.dart';
+import 'package:elite_edition/modules/inventory/model/inventory_item_model.dart';
 import 'package:elite_edition/model/report_datamodel.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -75,36 +75,7 @@ Future<Uint8List> generateProductPdf(
         );
       },
       footer: (context) {
-        return pw.Align(
-          alignment: pw.Alignment.bottomCenter,
-          child: pw.Container(
-            margin: const pw.EdgeInsets.only(top: 15),
-            child: pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.center,
-              crossAxisAlignment: pw.CrossAxisAlignment.center,
-              children: [
-                pw.Text(
-                  "Powered by ",
-                  style: pw.TextStyle(
-                    font: fontBold,
-                    fontSize: 10,
-                    color: PdfColor.fromHex("31343A"),
-                  ),
-                ),
-                _heartWidget(),
-                pw.Text(
-                  " HASI ",
-                  style: pw.TextStyle(
-                    font: fontBold,
-                    fontSize: 10,
-                    color: PdfColor.fromHex("31343A"),
-                  ),
-                ),
-                _heartWidget(),
-              ],
-            ),
-          ),
-        );
+        return pw.SizedBox();
       },
       build: (context) {
         return [
@@ -130,14 +101,14 @@ Future<Uint8List> generateProductPdf(
           pw.Table(
             border: pw.TableBorder.all(),
             columnWidths: {
-              0: pw.FlexColumnWidth(0.8), // Image
-              1: pw.FlexColumnWidth(1.2), // Row labels
-              2: pw.FlexColumnWidth(1.2), // Brand
-              3: pw.FlexColumnWidth(0.8), // Sum of Qty
-              4: pw.FlexColumnWidth(0.6), // CR
-              5: pw.FlexColumnWidth(0.6), // RTO
-              6: pw.FlexColumnWidth(0.8), // Total
-              7: pw.FlexColumnWidth(0.8), // Inventory
+              0: const pw.FlexColumnWidth(0.8), // Image
+              1: const pw.FlexColumnWidth(1.2), // Row labels
+              2: const pw.FlexColumnWidth(1.2), // Brand
+              3: const pw.FlexColumnWidth(0.8), // Sum of Qty
+              4: const pw.FlexColumnWidth(0.6), // CR
+              5: const pw.FlexColumnWidth(0.6), // RTO
+              6: const pw.FlexColumnWidth(0.8), // Total
+              7: const pw.FlexColumnWidth(0.8), // Inventory
             },
             children: [
               pw.TableRow(
@@ -163,7 +134,7 @@ Future<Uint8List> generateProductPdf(
                   children: [
                     image != null
                         ? pw.Padding(
-                            padding: pw.EdgeInsets.symmetric(vertical: 5),
+                            padding: const pw.EdgeInsets.symmetric(vertical: 5),
                             child: pw.Center(
                               child: pw.Image(image, width: 50, height: 50),
                             ),
@@ -302,36 +273,7 @@ Future<Uint8List> generatePdf(
         );
       },
       footer: (context) {
-        return pw.Align(
-          alignment: pw.Alignment.bottomCenter,
-          child: pw.Container(
-            margin: const pw.EdgeInsets.only(top: 15),
-            child: pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.center,
-              crossAxisAlignment: pw.CrossAxisAlignment.center,
-              children: [
-                pw.Text(
-                  "Powered by ",
-                  style: pw.TextStyle(
-                    font: fontBold,
-                    fontSize: 10,
-                    color: PdfColor.fromHex("31343A"),
-                  ),
-                ),
-                _heartWidget(),
-                pw.Text(
-                  " HASI ",
-                  style: pw.TextStyle(
-                    font: fontBold,
-                    fontSize: 10,
-                    color: PdfColor.fromHex("31343A"),
-                  ),
-                ),
-                _heartWidget(),
-              ],
-            ),
-          ),
-        );
+        return pw.SizedBox();
       },
       build: (context) {
         return [
@@ -376,13 +318,13 @@ Future<Uint8List> generatePdf(
           pw.Table(
             border: pw.TableBorder.all(),
             columnWidths: {
-              0: pw.FlexColumnWidth(0.7), // Image
-              1: pw.FlexColumnWidth(1.5), // SKU / Name
-              2: pw.FlexColumnWidth(1.0), // Brand
-              3: pw.FlexColumnWidth(0.8), // Sales Count
-              4: pw.FlexColumnWidth(0.8), // Avg Amount
-              5: pw.FlexColumnWidth(1.0), // Sellable Amount
-              6: pw.FlexColumnWidth(0.8), // FOB Price
+              0: const pw.FlexColumnWidth(0.7), // Image
+              1: const pw.FlexColumnWidth(1.5), // SKU / Name
+              2: const pw.FlexColumnWidth(1.0), // Brand
+              3: const pw.FlexColumnWidth(0.8), // Sales Count
+              4: const pw.FlexColumnWidth(0.8), // Avg Amount
+              5: const pw.FlexColumnWidth(1.0), // Sellable Amount
+              6: const pw.FlexColumnWidth(0.8), // FOB Price
             },
             children: [
               pw.TableRow(
@@ -413,7 +355,7 @@ Future<Uint8List> generatePdf(
                     // fob,
                     image != null
                         ? pw.Padding(
-                            padding: pw.EdgeInsets.symmetric(vertical: 5),
+                            padding: const pw.EdgeInsets.symmetric(vertical: 5),
                             child: pw.Center(
                               child: pw.Image(image, width: 50, height: 50),
                             ),
@@ -569,7 +511,7 @@ Future<pw.ImageProvider?> _fetchImage(String? url) async {
 
 _textWidget(String text) => pw.Center(
       child: pw.Padding(
-        padding: pw.EdgeInsets.symmetric(vertical: 7),
+        padding: const pw.EdgeInsets.symmetric(vertical: 7),
         child: pw.Text(
           text,
           textAlign: pw.TextAlign.center,
@@ -578,7 +520,7 @@ _textWidget(String text) => pw.Center(
     );
 
 _titleTextWidget(String title, pw.Font fontBold) => pw.Padding(
-      padding: pw.EdgeInsets.symmetric(vertical: 5),
+      padding: const pw.EdgeInsets.symmetric(vertical: 5),
       child: pw.Text(title,
           style: pw.TextStyle(font: fontBold), textAlign: pw.TextAlign.center),
     );
@@ -711,36 +653,7 @@ Future<Uint8List> generateBrandPdf({
         );
       },
       footer: (context) {
-        return pw.Align(
-          alignment: pw.Alignment.bottomCenter,
-          child: pw.Container(
-            margin: const pw.EdgeInsets.only(top: 15),
-            child: pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.center,
-              crossAxisAlignment: pw.CrossAxisAlignment.center,
-              children: [
-                pw.Text(
-                  "Powered by ",
-                  style: pw.TextStyle(
-                    font: fontBold,
-                    fontSize: 10,
-                    color: PdfColor.fromHex("31343A"),
-                  ),
-                ),
-                _heartWidget(),
-                pw.Text(
-                  " HASI ",
-                  style: pw.TextStyle(
-                    font: fontBold,
-                    fontSize: 10,
-                    color: PdfColor.fromHex("31343A"),
-                  ),
-                ),
-                _heartWidget(),
-              ],
-            ),
-          ),
-        );
+        return pw.SizedBox();
       },
       build: (context) {
         final List<pw.Widget> children = [];
@@ -1001,6 +914,77 @@ Future<Uint8List> generateBrandPdf({
       },
     ),
   );
+
+  return pdf.save();
+}
+
+Future<Uint8List> generateBarcodePdf({required InventoryItemModel item}) async {
+  final fontRegular =
+      pw.Font.ttf(await rootBundle.load("assets/fonts/Roboto-Regular.ttf"));
+  final fontBold =
+      pw.Font.ttf(await rootBundle.load("assets/fonts/Roboto-Bold.ttf"));
+
+  final pdf = pw.Document(
+    theme: pw.ThemeData.withFont(
+      base: fontRegular,
+      bold: fontBold,
+    ),
+  );
+
+  final int qty = item.qty;
+
+  // Barcode contains ONLY the SKU code
+  String barcodeData = item.skuCode;
+
+  pw.Widget buildSticker() {
+    return pw.Expanded(
+      child: pw.Container(
+        padding: const pw.EdgeInsets.all(5 * PdfPageFormat.mm),
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.center,
+          mainAxisAlignment: pw.MainAxisAlignment.center,
+          children: [
+            pw.Text(
+              "ELITE EDITION",
+              style: pw.TextStyle(fontSize: 35, font: fontBold),
+              maxLines: 1,
+            ),
+            pw.SizedBox(height: 5 * PdfPageFormat.mm),
+            pw.BarcodeWidget(
+              barcode: pw.Barcode.code128(),
+              data: barcodeData,
+              width: 200 * PdfPageFormat.mm,
+              height: 100 * PdfPageFormat.mm,
+              textStyle: pw.TextStyle(fontSize: 25, font: fontRegular),
+            ),
+            pw.SizedBox(height: 5 * PdfPageFormat.mm),
+            pw.Text(
+              "Size: ${item.size}",
+              style: pw.TextStyle(fontSize: 30, font: fontBold),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  for (int i = 0; i < qty; i += 2) {
+    bool hasSecond = (i + 1) < qty;
+    pdf.addPage(
+      pw.Page(
+        pageFormat: const PdfPageFormat(500 * PdfPageFormat.mm, 250 * PdfPageFormat.mm),
+        margin: pw.EdgeInsets.zero,
+        build: (context) {
+          return pw.Row(
+            children: [
+              buildSticker(),
+              if (hasSecond) buildSticker() else pw.Expanded(child: pw.SizedBox()),
+            ],
+          );
+        },
+      ),
+    );
+  }
 
   return pdf.save();
 }

@@ -36,7 +36,7 @@ class SplashView extends StatelessWidget {
                 TextSpan(
                   text: "Powered by ",
                   children: [
-                    TextSpan(
+                    const TextSpan(
                       text: "❤️ ",
                       style: TextStyle(color: Color(0xFFDB372D)),
                     ),
@@ -47,7 +47,7 @@ class SplashView extends StatelessWidget {
                         color: AppColor.white,
                       ),
                     ),
-                    TextSpan(
+                    const TextSpan(
                       text: " ❤️",
                       style: TextStyle(color: Color(0xFFDB372D)),
                     ),

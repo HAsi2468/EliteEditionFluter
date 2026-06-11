@@ -83,7 +83,7 @@ class Homepage extends StatelessWidget {
                 side: BorderSide(color: AppColor.primary900),
               ),
               child: Padding(
-                padding: EdgeInsets.all(5.0),
+                padding: const EdgeInsets.all(5.0),
                 child: Icon(
                   Icons.share_rounded,
                   color: AppColor.primary800,
@@ -430,7 +430,9 @@ class Homepage extends StatelessWidget {
                 try {
                   final invCtrl = Get.find<InventoryController>();
                   invCtrl.fetchInventory();
-                  invCtrl.fetchParties();
+                  invCtrl.fetchVendors();
+                  invCtrl.fetchNewParties();
+
                   invCtrl.fetchProducts();
                 } catch (e) {}
               }

@@ -9,26 +9,26 @@ class InternetController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    print("InternetController initialized");
+    debugPrint("InternetController initialized");
     _checkInitialConnection();
     _connectivity.onConnectivityChanged.listen(NetStatus);
   }
 
   Future<void> _checkInitialConnection() async {
-    print("Checking initial connection");
+    debugPrint("Checking initial connection");
     final List<ConnectivityResult> result =
         await _connectivity.checkConnectivity();
-    print("Initial connection status: $result");
+    debugPrint("Initial connection status: $result");
     NetStatus(result);
   }
 
   void NetStatus(List<ConnectivityResult> result) {
-    print("Network status changed: $result");
+    debugPrint("Network status changed: $result");
     // if (result == ConnectivityResult.none) {
     if (!(result.contains(ConnectivityResult.mobile)) && !(result.contains(ConnectivityResult.wifi))) {
-      print("No internet connection <<<=>>> attempting to show snackbar");
+      debugPrint("No internet connection <<<=>>> attempting to show snackbar");
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        print("Post frame callback - showing snackbar");
+        debugPrint("Post frame callback - showing snackbar");
         Get.rawSnackbar(
           titleText: SizedBox(
               width: double.infinity,
@@ -45,7 +45,7 @@ class InternetController extends GetxController {
       });
     } else {
       if (Get.isSnackbarOpen) {
-        print("Closing snackbar");
+        debugPrint("Closing snackbar");
         Get.closeCurrentSnackbar();
       }
     }

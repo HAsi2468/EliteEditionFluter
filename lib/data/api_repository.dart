@@ -62,6 +62,14 @@ class ApiRepository extends GetxService {
     return res;
   }
 
+  Future<dynamic> getInventoryReport(String dateStart, String dateEnd) async {
+    var res = await apiProvider.get("${ApiUrl.inventory}/report", {
+      "dateStart": dateStart,
+      "dateEnd": dateEnd,
+    });
+    return res;
+  }
+
   Future<dynamic> createInventory(dynamic body) async {
     var res = await apiProvider.post(ApiUrl.inventory, body);
     return res;
@@ -83,8 +91,49 @@ class ApiRepository extends GetxService {
     return res;
   }
 
-  Future<dynamic> getPartyList(Map<String, String>? param,
+  Future<dynamic> getVendorList(Map<String, String>? param,
       {bool isLog = false}) async {
+    var res = await apiProvider.get(ApiUrl.vendor, param, isLog: isLog);
+    return res;
+  }
+
+  Future<dynamic> createVendor(Map<String, dynamic> body) async {
+    var res = await apiProvider.post(ApiUrl.vendor, body);
+    return res;
+  }
+
+  Future<dynamic> updateVendor(String id, Map<String, dynamic> body) async {
+    var res = await apiProvider.put("${ApiUrl.vendor}/$id", body);
+    return res;
+  }
+
+  Future<dynamic> deleteVendor(String id) async {
+    var res = await apiProvider.delete("${ApiUrl.vendor}/$id");
+    return res;
+  }
+
+  Future<dynamic> createProduct(Map<String, dynamic> body) async {
+    var res = await apiProvider.post(ApiUrl.productBase, body);
+    return res;
+  }
+
+  Future<dynamic> deleteProduct(String id) async {
+    var res = await apiProvider.delete("${ApiUrl.productBase}/$id");
+    return res;
+  }
+
+  Future<dynamic> updateProduct(String id, Map<String, dynamic> body) async {
+    var res = await apiProvider.put("${ApiUrl.productBase}/$id", body);
+    return res;
+  }
+
+  Future<dynamic> syncMissingProducts() async {
+    var res = await apiProvider.get("${ApiUrl.productBase}/fetchMissingProduct", null);
+    return res;
+  }
+
+  // Party (Customer)
+  Future<dynamic> getPartyList(Map<String, String>? param, {bool isLog = false}) async {
     var res = await apiProvider.get(ApiUrl.party, param, isLog: isLog);
     return res;
   }
@@ -104,18 +153,14 @@ class ApiRepository extends GetxService {
     return res;
   }
 
-  Future<dynamic> createProduct(Map<String, dynamic> body) async {
-    var res = await apiProvider.post(ApiUrl.productBase, body);
+  // Stock Out
+  Future<dynamic> createStockOut(Map<String, dynamic> body) async {
+    var res = await apiProvider.post(ApiUrl.stockOut, body);
     return res;
   }
 
-  Future<dynamic> deleteProduct(String id) async {
-    var res = await apiProvider.delete("${ApiUrl.productBase}/$id");
-    return res;
-  }
-
-  Future<dynamic> updateProduct(String id, Map<String, dynamic> body) async {
-    var res = await apiProvider.put("${ApiUrl.productBase}/$id", body);
+  Future<dynamic> getStockOut() async {
+    var res = await apiProvider.get(ApiUrl.stockOut, null);
     return res;
   }
 }

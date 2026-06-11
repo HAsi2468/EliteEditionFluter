@@ -19,7 +19,7 @@ Future<String?> saveAndDownloadPdf(Uint8List bytes, String fileName) async {
   }
 
   // Fallback to temporary directory if documents/download is inaccessible
-  if (directory == null || !await directory.exists()) {
+  if (!await directory.exists()) {
     directory = await getTemporaryDirectory();
   }
 

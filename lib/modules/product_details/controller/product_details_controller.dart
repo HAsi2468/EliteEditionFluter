@@ -69,7 +69,7 @@ class ProductDetailsController extends GetxController {
       final baseSku = skuCode.split('_')[0];
       var res = await apiRepository
           .getProductDetailsData({"skuCode": baseSku}, isLog: false);
-      print("fetchData() raw response: $res");
+      debugPrint("fetchData() raw response: $res");
       if (res != null && res is List && res.isNotEmpty) {
         var data = List<ProductDataModel>.from(
             res.map((x) => ProductDataModel.fromJson(x)));
@@ -174,7 +174,7 @@ class ProductDetailsController extends GetxController {
       }
     } catch (e, s) {
       isLoading.value = false;
-      print("Error on fetchData() => $e \n $s");
+      debugPrint("Error on fetchData() => $e \n $s");
     }
   }
 
@@ -253,12 +253,12 @@ class ProductDetailsController extends GetxController {
         final params = SaveFileDialogParams(sourceFilePath: file.path);
         final finalPath = await FlutterFileDialog.saveFile(params: params);
 
-        print('Image downloaded and saved with watermark');
+        debugPrint('Image downloaded and saved with watermark');
       } else {
-        print('Failed to decode the image.');
+        debugPrint('Failed to decode the image.');
       }
     } else {
-      print('Failed to download the image.');
+      debugPrint('Failed to download the image.');
     }
   }
 
@@ -369,7 +369,7 @@ class ProductDetailsController extends GetxController {
       }
     } catch (e, s) {
       Get.back();
-      print("Error on getReport() => $e \n $s");
+      debugPrint("Error on getReport() => $e \n $s");
     }
   }
 }

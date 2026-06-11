@@ -11,7 +11,7 @@ class AppSnacks {
         snackPosition: SnackPosition.BOTTOM,
       );
     } catch (e) {
-      print("Snackbar error: $e");
+      debugPrint("Snackbar error: $e");
     }
   }
 
@@ -24,7 +24,7 @@ class AppSnacks {
         snackPosition: SnackPosition.BOTTOM,
       );
     } catch (e) {
-      print("Snackbar error: $e");
+      debugPrint("Snackbar error: $e");
     }
   }
 }

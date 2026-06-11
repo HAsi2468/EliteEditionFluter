@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:elite_edition/constants/app_color.dart';
 import 'package:elite_edition/modules/auth/controller/auth_controller.dart';
-import 'package:elite_edition/routes/app_routes.dart';
 import 'package:elite_edition/shared_widget/app_button.dart';
 import 'package:elite_edition/shared_widget/app_image.dart';
 import 'package:elite_edition/shared_widget/app_snacks.dart';
