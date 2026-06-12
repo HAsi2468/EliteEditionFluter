@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_file_dialog/flutter_file_dialog.dart';
 import 'package:get/get.dart';
 import 'package:elite_edition/constants/app_color.dart';
+import 'package:elite_edition/constants/api_url.dart';
 import 'package:elite_edition/data/api_repository.dart';
 import 'package:elite_edition/model/product_datamodel.dart';
 import 'package:http/http.dart' as http;
@@ -268,98 +269,52 @@ class ProductDetailsController extends GetxController {
       Get.back(); // close date select sheet/dialog
       AppLoader.show();
 
-      final Map<String, String> queryParams = {
-        "dateStart":
-            "${selectStartDate.year}-${selectStartDate.month}-${selectStartDate.day}",
-        "dateEnd":
-            "${selectEndDate.year}-${selectEndDate.month}-${selectEndDate.day}",
-        "searchCode": skuCode,
-      };
+      final startStr = "${selectStartDate.year}-${selectStartDate.month.toString().padLeft(2, '0')}-${selectStartDate.day.toString().padLeft(2, '0')}";
+      final endStr = "${selectEndDate.year}-${selectEndDate.month.toString().padLeft(2, '0')}-${selectEndDate.day.toString().padLeft(2, '0')}";
 
+      String reportUrl;
+      String fileName;
       if (selectedReportType.value == "brand") {
-        var res = await apiRepository.getBrandReport(queryParams, isLog: false);
-        if (res != false && res != null) {
-          final pdfBytes = await generateBrandPdf(
-            brandReportData: res,
-            startDate: selectStartDate,
-            endDate: selectEndDate,
-          );
-          final fileName = "Brand_Report_${DateTime.now().millisecondsSinceEpoch}.pdf";
-          await AppLoader.hide();
+        reportUrl = "${ApiUrl.baseUrl}/salesList/report/pdf?type=brand&dateStart=$startStr&dateEnd=$endStr&searchCode=$skuCode";
+        fileName = "Brand_Report_${skuCode}_$startStr.pdf";
+      } else {
+        reportUrl = "${ApiUrl.baseUrl}/salesList/report/pdf?type=sales&dateStart=$startStr&dateEnd=$endStr&searchCode=$skuCode";
+        fileName = "Sales_Report_${skuCode}_$startStr.pdf";
+      }
 
-          if (kIsWeb) {
-            if (isDownload) {
-              await saveAndDownloadPdf(pdfBytes, fileName);
-              AppSnacks.successSnack(message: "Brand report downloaded successfully");
-            } else {
-              await AppShare.shareFile(XFile.fromData(
-                pdfBytes,
-                mimeType: 'application/pdf',
-                name: fileName,
-              ));
-            }
-          } else {
-            final filePath = await saveAndDownloadPdf(pdfBytes, fileName);
-            if (filePath != null) {
-              if (isDownload) {
-                Get.to(() => AppPdfView(path: filePath));
-              } else {
-                AppShare.shareFile(XFile(filePath));
-              }
-            }
-          }
+      final response = await http.get(Uri.parse(reportUrl));
+      if (response.statusCode != 200) {
+        throw Exception("Backend returned status code ${response.statusCode}");
+      }
+      final Uint8List pdfBytes = response.bodyBytes;
+      await AppLoader.hide(); // close loading
+
+      if (kIsWeb) {
+        if (isDownload) {
+          await saveAndDownloadPdf(pdfBytes, fileName);
+          AppSnacks.successSnack(
+              message: "${selectedReportType.value == "brand" ? "Brand" : "Sales"} report downloaded successfully");
         } else {
-          await AppLoader.hide();
+          await AppShare.shareFile(XFile.fromData(
+            pdfBytes,
+            mimeType: 'application/pdf',
+            name: fileName,
+          ));
         }
       } else {
-        var res = await apiRepository.getReport(queryParams, isLog: true);
-        if (res != false) {
-          var data = List<ReportDataModel>.from(
-              res.map((x) => ReportDataModel.fromJson(x)));
-          for (var item in data) {
-            item.productImage = dataModel.value?.imageUrl;
-            item.skuName = dataModel.value?.description ?? skuCode;
-            item.brand = dataModel.value?.brand ?? '';
-          }
-          reportDataList.assignAll(data);
-
-          final pdfBytes = await generateProductPdf(
-            reportList: reportDataList,
-            startDate: selectStartDate,
-            endDate: selectEndDate,
-            sku: skuCode,
-          );
-          final fileName = "Report_${DateTime.now().millisecondsSinceEpoch}.pdf";
-          await AppLoader.hide();
-
-          if (kIsWeb) {
-            if (isDownload) {
-              await saveAndDownloadPdf(pdfBytes, fileName);
-              AppSnacks.successSnack(message: "Report downloaded successfully");
-            } else {
-              await AppShare.shareFile(XFile.fromData(
-                pdfBytes,
-                mimeType: 'application/pdf',
-                name: fileName,
-              ));
-            }
+        final filePath = await saveAndDownloadPdf(pdfBytes, fileName);
+        if (filePath != null) {
+          if (isDownload) {
+            Get.to(() => AppPdfView(path: filePath));
           } else {
-            final filePath = await saveAndDownloadPdf(pdfBytes, fileName);
-            if (filePath != null) {
-              if (isDownload) {
-                Get.to(() => AppPdfView(path: filePath));
-              } else {
-                AppShare.shareFile(XFile(filePath));
-              }
-            }
+            AppShare.shareFile(XFile(filePath));
           }
-        } else {
-          await AppLoader.hide();
         }
       }
     } catch (e, s) {
-      await AppLoader.hide();
+      await AppLoader.hide(); // close loading
       debugPrint("Error on getReport() => $e \n $s");
+      AppSnacks.errorSnack(message: "Failed to download PDF: $e");
     }
   }
 }
