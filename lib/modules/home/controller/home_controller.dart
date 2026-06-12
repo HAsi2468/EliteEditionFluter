@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
+import 'package:elite_edition/constants/api_url.dart';
 import 'package:elite_edition/constants/app_color.dart';
 import 'package:elite_edition/data/api_repository.dart';
 import 'package:elite_edition/model/filter_datamodel.dart';
