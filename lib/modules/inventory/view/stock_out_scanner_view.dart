@@ -7,7 +7,7 @@ import 'package:elite_edition/modules/inventory/controller/inventory_controller.
 import 'package:elite_edition/shared_widget/app_snacks.dart';
 
 class StockOutScannerView extends StatefulWidget {
-  const StockOutScannerView({Key? key}) : super(key: key);
+  const StockOutScannerView({super.key});
 
   @override
   State<StockOutScannerView> createState() => _StockOutScannerViewState();
@@ -16,15 +16,15 @@ class StockOutScannerView extends StatefulWidget {
 class _StockOutScannerViewState extends State<StockOutScannerView> {
   final MobileScannerController cameraController = MobileScannerController();
   final InventoryController controller = Get.find();
-  
+
   String? selectedParty;
-  
+
   // local storage for scanned items
   // Format: [{skuCode: '123', qty: 1}, ...]
   List<Map<String, dynamic>> scannedItems = [];
 
   bool isSaving = false;
-  
+
   // Debounce for scanning
   DateTime? lastScanTime;
 
@@ -48,14 +48,15 @@ class _StockOutScannerViewState extends State<StockOutScannerView> {
         children: <Widget>[
           // 1. Party Selection Area
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
             child: Container(
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
@@ -79,9 +80,9 @@ class _StockOutScannerViewState extends State<StockOutScannerView> {
                 items: (filter, loadProps) {
                   final query = filter.toLowerCase();
                   return controller.newPartiesList
-                    .map((p) => p.name)
-                    .where((name) => name.toLowerCase().contains(query))
-                    .toList();
+                      .map((p) => p.name)
+                      .where((name) => name.toLowerCase().contains(query))
+                      .toList();
                 },
                 decoratorProps: DropDownDecoratorProps(
                   decoration: InputDecoration(
@@ -93,7 +94,8 @@ class _StockOutScannerViewState extends State<StockOutScannerView> {
                     ),
                     filled: true,
                     fillColor: Colors.white,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                   ),
                 ),
                 selectedItem: selectedParty,
@@ -105,7 +107,7 @@ class _StockOutScannerViewState extends State<StockOutScannerView> {
               ),
             ),
           ),
-          
+
           // 2. Small Scanner Area
           Container(
             height: 250,
@@ -115,7 +117,7 @@ class _StockOutScannerViewState extends State<StockOutScannerView> {
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: 12,
                   offset: const Offset(0, 6),
                 ),
@@ -128,9 +130,10 @@ class _StockOutScannerViewState extends State<StockOutScannerView> {
                 final List<Barcode> barcodes = capture.barcodes;
                 if (barcodes.isNotEmpty && barcodes.first.rawValue != null) {
                   final String code = barcodes.first.rawValue!;
-                  
+
                   // Simple debounce
-                  if (lastScanTime == null || DateTime.now().difference(lastScanTime!).inSeconds > 1) {
+                  if (lastScanTime == null ||
+                      DateTime.now().difference(lastScanTime!).inSeconds > 1) {
                     SystemSound.play(SystemSoundType.alert);
                     lastScanTime = DateTime.now();
                     _handleScan(code);
@@ -139,98 +142,111 @@ class _StockOutScannerViewState extends State<StockOutScannerView> {
               },
             ),
           ),
-          
+
           const SizedBox(height: 16),
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16.0),
             child: Align(
               alignment: Alignment.centerLeft,
-              child: Text("Scanned Items", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black87)),
+              child: Text("Scanned Items",
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: Colors.black87)),
             ),
           ),
           const SizedBox(height: 8),
-          
+
           // 3. List of Scanned Items
           Expanded(
-            child: scannedItems.isEmpty 
-              ? Center(
-                  child: Text("No items scanned yet.", 
-                    style: TextStyle(color: Colors.grey.shade500, fontSize: 16)
-                  )
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  itemCount: scannedItems.length,
-                  itemBuilder: (context, index) {
-                    final item = scannedItems[index];
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.04),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                        leading: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.green.shade50,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(Icons.check_rounded, color: Colors.green.shade600, size: 20),
+            child: scannedItems.isEmpty
+                ? Center(
+                    child: Text("No items scanned yet.",
+                        style: TextStyle(
+                            color: Colors.grey.shade500, fontSize: 16)))
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    itemCount: scannedItems.length,
+                    itemBuilder: (context, index) {
+                      final item = scannedItems[index];
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.04),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
-                        title: Text("SKU: ${item['skuCode']}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                        subtitle: Padding(
-                          padding: const EdgeInsets.only(top: 4.0),
-                          child: Text("Quantity: ${item['qty']}", style: TextStyle(color: Colors.grey.shade600)),
-                        ),
-                        trailing: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: Icon(Icons.remove_rounded, color: Colors.red.shade400, size: 20),
-                                splashRadius: 20,
-                                onPressed: () {
-                                  setState(() {
-                                    if (item['qty'] > 1) {
-                                      item['qty']--;
-                                    } else {
-                                      scannedItems.removeAt(index);
-                                    }
-                                  });
-                                },
+                        child: ListTile(
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 4),
+                            leading: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.green.shade50,
+                                shape: BoxShape.circle,
                               ),
-                              Text("${item['qty']}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                              IconButton(
-                                icon: Icon(Icons.add_rounded, color: Colors.green.shade600, size: 20),
-                                splashRadius: 20,
-                                onPressed: () {
-                                  setState(() {
-                                    item['qty']++;
-                                  });
-                                },
+                              child: Icon(Icons.check_rounded,
+                                  color: Colors.green.shade600, size: 20),
+                            ),
+                            title: Text("SKU: ${item['skuCode']}",
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold, fontSize: 15)),
+                            subtitle: Padding(
+                              padding: const EdgeInsets.only(top: 4.0),
+                              child: Text("Quantity: ${item['qty']}",
+                                  style:
+                                      TextStyle(color: Colors.grey.shade600)),
+                            ),
+                            trailing: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade100,
+                                borderRadius: BorderRadius.circular(20),
                               ),
-                            ],
-                          ),
-                        )
-                      ),
-                    );
-                  },
-                ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: Icon(Icons.remove_rounded,
+                                        color: Colors.red.shade400, size: 20),
+                                    splashRadius: 20,
+                                    onPressed: () {
+                                      setState(() {
+                                        if (item['qty'] > 1) {
+                                          item['qty']--;
+                                        } else {
+                                          scannedItems.removeAt(index);
+                                        }
+                                      });
+                                    },
+                                  ),
+                                  Text("${item['qty']}",
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14)),
+                                  IconButton(
+                                    icon: Icon(Icons.add_rounded,
+                                        color: Colors.green.shade600, size: 20),
+                                    splashRadius: 20,
+                                    onPressed: () {
+                                      setState(() {
+                                        item['qty']++;
+                                      });
+                                    },
+                                  ),
+                                ],
+                              ),
+                            )),
+                      );
+                    },
+                  ),
           ),
-          
+
           // 4. Action Area
           Container(
             padding: const EdgeInsets.all(16.0),
@@ -238,7 +254,7 @@ class _StockOutScannerViewState extends State<StockOutScannerView> {
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 10,
                   offset: const Offset(0, -4),
                 ),
@@ -247,16 +263,23 @@ class _StockOutScannerViewState extends State<StockOutScannerView> {
             width: double.infinity,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                backgroundColor: const Color(0xFF1F2937), // AppColor.primary800 match
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
-              ),
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  backgroundColor:
+                      const Color(0xFF1F2937), // AppColor.primary800 match
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12))),
               onPressed: isSaving ? null : _saveAll,
-              child: isSaving 
-                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : Text("Save All (${scannedItems.length} unique SKUs)", style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+              child: isSaving
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2))
+                  : Text("Save All (${scannedItems.length} unique SKUs)",
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.w600)),
             ),
           )
         ],
@@ -269,7 +292,7 @@ class _StockOutScannerViewState extends State<StockOutScannerView> {
       AppSnacks.errorSnack(message: "Please select a Party before scanning.");
       return;
     }
-    
+
     setState(() {
       int idx = scannedItems.indexWhere((element) => element['skuCode'] == sku);
       if (idx >= 0) {
@@ -278,9 +301,11 @@ class _StockOutScannerViewState extends State<StockOutScannerView> {
         scannedItems.add({'skuCode': sku, 'qty': 1});
       }
     });
-    
+
     // Optional: show a quick snackbar when adding
-    AppSnacks.successSnack(message: "Added $sku (Total: ${scannedItems.firstWhere((e) => e['skuCode'] == sku)['qty']})");
+    AppSnacks.successSnack(
+        message:
+            "Added $sku (Total: ${scannedItems.firstWhere((e) => e['skuCode'] == sku)['qty']})");
   }
 
   Future<void> _saveAll() async {
@@ -299,13 +324,10 @@ class _StockOutScannerViewState extends State<StockOutScannerView> {
 
     bool allSuccess = true;
     int successCount = 0;
-    
+
     for (var item in scannedItems) {
-      bool success = await controller.submitStockOut(
-        item['skuCode'], 
-        selectedParty!,
-        qtyOut: item['qty']
-      );
+      bool success = await controller
+          .submitStockOut(item['skuCode'], selectedParty!, qtyOut: item['qty']);
       if (success) {
         successCount++;
       } else {
@@ -318,10 +340,13 @@ class _StockOutScannerViewState extends State<StockOutScannerView> {
     });
 
     if (allSuccess) {
-      AppSnacks.successSnack(message: "Successfully saved $successCount items!");
+      AppSnacks.successSnack(
+          message: "Successfully saved $successCount items!");
       Navigator.of(context).pop();
     } else {
-      AppSnacks.errorSnack(message: "Saved $successCount items, but some failed. Check for insufficient stock.");
+      AppSnacks.errorSnack(
+          message:
+              "Saved $successCount items, but some failed. Check for insufficient stock.");
     }
   }
 

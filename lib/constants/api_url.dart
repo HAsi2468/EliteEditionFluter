@@ -18,8 +18,9 @@ abstract class ApiUrl {
   static const String productBase = "products";
 
   static String getFullImageUrl(String? url) {
-    if (url == null || url.isEmpty || url == "null")
+    if (url == null || url.isEmpty || url == "null") {
       return "https://placehold.co/600x400/png?text=Elite+Edition";
+    }
     if (url.startsWith("http://") || url.startsWith("https://")) {
       return url;
     }

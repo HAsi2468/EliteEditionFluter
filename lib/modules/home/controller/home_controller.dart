@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:get/get.dart';
 import 'package:elite_edition/constants/app_color.dart';
 import 'package:elite_edition/data/api_repository.dart';

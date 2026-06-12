@@ -14,12 +14,14 @@ Future<dynamic> generateInventoryReportCsv({
 
   // Add Report Header
   csv.writeln('Inventory Report');
-  csv.writeln('Date:,${startDate.day}-${startDate.month}-${startDate.year} To ${endDate.day}-${endDate.month}-${endDate.year}');
+  csv.writeln(
+      'Date:,${startDate.day}-${startDate.month}-${startDate.year} To ${endDate.day}-${endDate.month}-${endDate.year}');
   csv.writeln('');
 
-  void _buildSectionCsv(String title, Map<String, dynamic> sectionData) {
+  void buildSectionCsv(String title, Map<String, dynamic> sectionData) {
     final int totalOrderQuantity = sectionData['totalOrderQuantity'] ?? 0;
-    final double totalSellableAmount = (sectionData['totalSellableAmount'] ?? 0).toDouble();
+    final double totalSellableAmount =
+        (sectionData['totalSellableAmount'] ?? 0).toDouble();
     final List<dynamic> items = sectionData['items'] ?? [];
 
     csv.writeln('Section:,$title');
@@ -34,7 +36,8 @@ Future<dynamic> generateInventoryReportCsv({
     }
 
     // Table Header
-    csv.writeln('SKU,Vendor,Size,Size Quantity,Total Quantity,Purchase Amount,Sellable Amount,Profit');
+    csv.writeln(
+        'SKU,Vendor,Size,Size Quantity,Total Quantity,Purchase Amount,Sellable Amount,Profit');
 
     for (var item in items) {
       final sku = item['sku']?.toString().replaceAll(',', ' ') ?? '';
@@ -52,10 +55,11 @@ Future<dynamic> generateInventoryReportCsv({
           final s = sizes[i];
           final sizeName = s['size']?.toString().replaceAll(',', ' ') ?? '';
           final sizeQty = s['qty']?.toString() ?? '0';
-          
+
           if (i == 0) {
             // First row contains the full data
-            csv.writeln('$sku,$party,$sizeName,$sizeQty,$total,$purchaseAmt,$sellableAmt,$profit');
+            csv.writeln(
+                '$sku,$party,$sizeName,$sizeQty,$total,$purchaseAmt,$sellableAmt,$profit');
           } else {
             // Subsequent rows for sizes only need size and sizeQty, others can be blank
             csv.writeln(',,$sizeName,$sizeQty,,,,');
@@ -66,14 +70,15 @@ Future<dynamic> generateInventoryReportCsv({
     csv.writeln('');
   }
 
-  _buildSectionCsv("Current stock", reportData['currentStock'] ?? {});
-  _buildSectionCsv("Stock in", reportData['stockIn'] ?? {});
-  _buildSectionCsv("Stock out", reportData['stockOut'] ?? {});
+  buildSectionCsv("Current stock", reportData['currentStock'] ?? {});
+  buildSectionCsv("Stock in", reportData['stockIn'] ?? {});
+  buildSectionCsv("Stock out", reportData['stockOut'] ?? {});
 
   final List<int> bytes = utf8.encode(csv.toString());
   final Uint8List csvData = Uint8List.fromList(bytes);
 
-  final fileName = "Inventory_Report_${startDate.day}-${startDate.month}-${startDate.year}.csv";
+  final fileName =
+      "Inventory_Report_${startDate.day}-${startDate.month}-${startDate.year}.csv";
 
   // Reusing the saveAndDownloadPdf logic since it just saves bytes with a given filename
   return await saveAndDownloadPdf(csvData, fileName);
