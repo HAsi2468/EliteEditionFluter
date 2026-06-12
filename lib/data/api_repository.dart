@@ -163,4 +163,14 @@ class ApiRepository extends GetxService {
     var res = await apiProvider.get(ApiUrl.stockOut, null);
     return res;
   }
+
+  Future<dynamic> updateStockOut(String id, Map<String, dynamic> body) async {
+    var res = await apiProvider.put("${ApiUrl.stockOut}/$id", body);
+    return res;
+  }
+
+  Future<dynamic> deleteStockOut(String id) async {
+    var res = await apiProvider.delete("${ApiUrl.stockOut}/$id");
+    return res;
+  }
 }

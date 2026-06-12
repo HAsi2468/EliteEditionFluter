@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:get/get.dart';
 import 'package:elite_edition/constants/app_color.dart';
 import 'package:elite_edition/data/api_repository.dart';
@@ -116,11 +117,12 @@ class HomeController extends GetxService {
   Future<void> enrichProducts(List<Product> products) async {
     final toFetch = products
         .map((p) => p.itemSkuCode)
-        .where((sku) => sku.isNotEmpty && 
-                        (!_skuDetailsCache.containsKey(sku) || 
-                         (_skuDetailsCache[sku]?['imageUrl'] ?? '').toString().isEmpty || 
-                         (_skuDetailsCache[sku]?['skuName'] ?? '').toString().isEmpty ||
-                         (_skuDetailsCache[sku]?['brand'] ?? '').toString().isEmpty))
+        .where((sku) =>
+            sku.isNotEmpty &&
+            (!_skuDetailsCache.containsKey(sku) ||
+                (_skuDetailsCache[sku]?['imageUrl'] ?? '').toString().isEmpty ||
+                (_skuDetailsCache[sku]?['skuName'] ?? '').toString().isEmpty ||
+                (_skuDetailsCache[sku]?['brand'] ?? '').toString().isEmpty))
         .toSet()
         .toList();
 
@@ -128,21 +130,27 @@ class HomeController extends GetxService {
       await Future.wait(toFetch.map((sku) async {
         try {
           final baseSku = sku.split('_')[0];
-          var res = await apiRepository.getProductDetailsData({"skuCode": baseSku});
+          var res =
+              await apiRepository.getProductDetailsData({"skuCode": baseSku});
           String imageUrl = '';
           String skuName = '';
           String brand = '';
           if (res != null && res is List && res.isNotEmpty) {
             final details = res[0];
             imageUrl = (details['imageUrl'] ?? '').toString();
-            skuName = (details['description'] ?? details['categoryName'] ?? '').toString();
+            skuName = (details['description'] ?? details['categoryName'] ?? '')
+                .toString();
             brand = (details['brand'] ?? '').toString();
           }
 
           // Fetch order details for fallback if needed
-          var orderRes = await apiRepository.getListData({"itemSKUCode": sku, "limit": "1"});
+          var orderRes = await apiRepository
+              .getListData({"itemSKUCode": sku, "limit": "1"});
           Map<String, dynamic>? firstOrder;
-          if (orderRes != false && orderRes['data'] != null && orderRes['data'] is List && orderRes['data'].isNotEmpty) {
+          if (orderRes != false &&
+              orderRes['data'] != null &&
+              orderRes['data'] is List &&
+              orderRes['data'].isNotEmpty) {
             firstOrder = orderRes['data'][0];
           }
 
@@ -175,12 +183,15 @@ class HomeController extends GetxService {
 
     for (var product in products) {
       if (_skuDetailsCache.containsKey(product.itemSkuCode)) {
-        product.productImage = _skuDetailsCache[product.itemSkuCode]!['imageUrl'] ?? '';
+        product.productImage =
+            _skuDetailsCache[product.itemSkuCode]!['imageUrl'] ?? '';
         if (product.skuName.isEmpty) {
-          product.skuName = _skuDetailsCache[product.itemSkuCode]!['skuName'] ?? '';
+          product.skuName =
+              _skuDetailsCache[product.itemSkuCode]!['skuName'] ?? '';
         }
         if (product.itemTypeBrand.isEmpty) {
-          product.itemTypeBrand = _skuDetailsCache[product.itemSkuCode]!['brand'] ?? '';
+          product.itemTypeBrand =
+              _skuDetailsCache[product.itemSkuCode]!['brand'] ?? '';
         }
       }
     }
@@ -189,10 +200,11 @@ class HomeController extends GetxService {
   Future<void> enrichReports(List<ReportDataModel> reports) async {
     final toFetch = reports
         .map((r) => r.itemSkuCode)
-        .where((sku) => sku.isNotEmpty && 
-                        (!_skuDetailsCache.containsKey(sku) || 
-                         (_skuDetailsCache[sku]?['imageUrl'] ?? '').toString().isEmpty || 
-                         (_skuDetailsCache[sku]?['skuName'] ?? '').toString().isEmpty))
+        .where((sku) =>
+            sku.isNotEmpty &&
+            (!_skuDetailsCache.containsKey(sku) ||
+                (_skuDetailsCache[sku]?['imageUrl'] ?? '').toString().isEmpty ||
+                (_skuDetailsCache[sku]?['skuName'] ?? '').toString().isEmpty))
         .toSet()
         .toList();
 
@@ -200,21 +212,27 @@ class HomeController extends GetxService {
       await Future.wait(toFetch.map((sku) async {
         try {
           final baseSku = sku.split('_')[0];
-          var res = await apiRepository.getProductDetailsData({"skuCode": baseSku});
+          var res =
+              await apiRepository.getProductDetailsData({"skuCode": baseSku});
           String imageUrl = '';
           String skuName = '';
           String brand = '';
           if (res != null && res is List && res.isNotEmpty) {
             final details = res[0];
             imageUrl = (details['imageUrl'] ?? '').toString();
-            skuName = (details['description'] ?? details['categoryName'] ?? '').toString();
+            skuName = (details['description'] ?? details['categoryName'] ?? '')
+                .toString();
             brand = (details['brand'] ?? '').toString();
           }
 
           // Fetch order details for fallback if needed
-          var orderRes = await apiRepository.getListData({"itemSKUCode": sku, "limit": "1"});
+          var orderRes = await apiRepository
+              .getListData({"itemSKUCode": sku, "limit": "1"});
           Map<String, dynamic>? firstOrder;
-          if (orderRes != false && orderRes['data'] != null && orderRes['data'] is List && orderRes['data'].isNotEmpty) {
+          if (orderRes != false &&
+              orderRes['data'] != null &&
+              orderRes['data'] is List &&
+              orderRes['data'].isNotEmpty) {
             firstOrder = orderRes['data'][0];
           }
 
@@ -247,9 +265,11 @@ class HomeController extends GetxService {
 
     for (var report in reports) {
       if (_skuDetailsCache.containsKey(report.itemSkuCode)) {
-        report.productImage = _skuDetailsCache[report.itemSkuCode]!['imageUrl'] ?? '';
+        report.productImage =
+            _skuDetailsCache[report.itemSkuCode]!['imageUrl'] ?? '';
         if (report.skuName == null || report.skuName.toString().isEmpty) {
-          report.skuName = _skuDetailsCache[report.itemSkuCode]!['skuName'] ?? '';
+          report.skuName =
+              _skuDetailsCache[report.itemSkuCode]!['skuName'] ?? '';
         }
         if (report.brand == null || report.brand.toString().isEmpty) {
           report.brand = _skuDetailsCache[report.itemSkuCode]!['brand'] ?? '';
@@ -310,12 +330,17 @@ class HomeController extends GetxService {
         for (var p in data.product) {
           if (p.itemSkuCode.isNotEmpty) {
             final existing = _skuDetailsCache[p.itemSkuCode];
-            final img = (p.productImage.isNotEmpty && p.productImage != "null") ? p.productImage : '';
-            final name = (p.skuName.isNotEmpty && p.skuName != "null") ? p.skuName : '';
+            final img = (p.productImage.isNotEmpty && p.productImage != "null")
+                ? p.productImage
+                : '';
+            final name =
+                (p.skuName.isNotEmpty && p.skuName != "null") ? p.skuName : '';
             if (img.isNotEmpty || name.isNotEmpty) {
               _skuDetailsCache[p.itemSkuCode] = {
-                'imageUrl': img.isNotEmpty ? img : (existing?['imageUrl'] ?? ''),
-                'skuName': name.isNotEmpty ? name : (existing?['skuName'] ?? ''),
+                'imageUrl':
+                    img.isNotEmpty ? img : (existing?['imageUrl'] ?? ''),
+                'skuName':
+                    name.isNotEmpty ? name : (existing?['skuName'] ?? ''),
               };
             }
           }
@@ -389,12 +414,17 @@ class HomeController extends GetxService {
         for (var p in data.product) {
           if (p.itemSkuCode.isNotEmpty) {
             final existing = _skuDetailsCache[p.itemSkuCode];
-            final img = (p.productImage.isNotEmpty && p.productImage != "null") ? p.productImage : '';
-            final name = (p.skuName.isNotEmpty && p.skuName != "null") ? p.skuName : '';
+            final img = (p.productImage.isNotEmpty && p.productImage != "null")
+                ? p.productImage
+                : '';
+            final name =
+                (p.skuName.isNotEmpty && p.skuName != "null") ? p.skuName : '';
             if (img.isNotEmpty || name.isNotEmpty) {
               _skuDetailsCache[p.itemSkuCode] = {
-                'imageUrl': img.isNotEmpty ? img : (existing?['imageUrl'] ?? ''),
-                'skuName': name.isNotEmpty ? name : (existing?['skuName'] ?? ''),
+                'imageUrl':
+                    img.isNotEmpty ? img : (existing?['imageUrl'] ?? ''),
+                'skuName':
+                    name.isNotEmpty ? name : (existing?['skuName'] ?? ''),
               };
             }
           }
@@ -498,7 +528,7 @@ class HomeController extends GetxService {
     debugPrint("start date <><> ${startDateTime?.toIso8601String()}");
     if (selectedSort.value == "Order (low to high)" ||
         selectedSort.value == "Order (high to low)") {
-      if(selectFilterStartDate == null){
+      if (selectFilterStartDate == null) {
         if (selectedSort.value == "Order (high to low)") {
           startDateTime = DateTime(
             now.year,
@@ -556,13 +586,15 @@ class HomeController extends GetxService {
             startDate: selectStartDate,
             endDate: selectEndDate,
           );
-          final fileName = "Brand_Report_${DateTime.now().millisecondsSinceEpoch}.pdf";
+          final fileName =
+              "Brand_Report_${DateTime.now().millisecondsSinceEpoch}.pdf";
           Get.back();
 
           if (kIsWeb) {
             if (isDownload) {
               await saveAndDownloadPdf(pdfBytes, fileName);
-              AppSnacks.successSnack(message: "Brand report downloaded successfully");
+              AppSnacks.successSnack(
+                  message: "Brand report downloaded successfully");
             } else {
               await AppShare.shareFile(XFile.fromData(
                 pdfBytes,
@@ -596,7 +628,8 @@ class HomeController extends GetxService {
             startDate: selectStartDate,
             endDate: selectEndDate,
           );
-          final fileName = "Report_${DateTime.now().millisecondsSinceEpoch}.pdf";
+          final fileName =
+              "Report_${DateTime.now().millisecondsSinceEpoch}.pdf";
           Get.back();
 
           if (kIsWeb) {

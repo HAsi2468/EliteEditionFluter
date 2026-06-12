@@ -331,10 +331,10 @@ class ProductDetailsController extends GetxController {
             item.skuName = dataModel.value?.description ?? skuCode;
             item.brand = dataModel.value?.brand ?? '';
           }
-          reportDataList.value = data;
+          reportDataList.assignAll(data);
 
           final pdfBytes = await generateProductPdf(
-            reportList: reportDataList.value,
+            reportList: reportDataList,
             startDate: selectStartDate,
             endDate: selectEndDate,
             sku: skuCode,

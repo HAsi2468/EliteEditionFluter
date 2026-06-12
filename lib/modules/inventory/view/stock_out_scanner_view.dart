@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:dropdown_search/dropdown_search.dart';
 import 'package:elite_edition/modules/inventory/controller/inventory_controller.dart';
 import 'package:elite_edition/shared_widget/app_snacks.dart';
 
@@ -59,27 +61,43 @@ class _StockOutScannerViewState extends State<StockOutScannerView> {
                   ),
                 ],
               ),
-              child: DropdownButtonFormField<String>(
-                decoration: InputDecoration(
-                  labelText: 'Select Party First',
-                  labelStyle: TextStyle(color: Colors.grey.shade600),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
+              child: DropdownSearch<String>(
+                popupProps: PopupProps.menu(
+                  showSearchBox: true,
+                  searchFieldProps: TextFieldProps(
+                    decoration: InputDecoration(
+                      hintText: "Search Party",
+                      filled: true,
+                      fillColor: Colors.grey.shade100,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
                   ),
-                  filled: true,
-                  fillColor: Colors.white,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
-                value: selectedParty,
-                icon: const Icon(Icons.arrow_drop_down_rounded, color: Colors.black87),
-                items: controller.newPartiesList.map((party) {
-                  return DropdownMenuItem(
-                    value: party.name,
-                    child: Text(party.name, style: const TextStyle(fontWeight: FontWeight.w500)),
-                  );
-                }).toList(),
-                onChanged: (val) {
+                items: (filter, loadProps) {
+                  final query = filter.toLowerCase();
+                  return controller.newPartiesList
+                    .map((p) => p.name)
+                    .where((name) => name.toLowerCase().contains(query))
+                    .toList();
+                },
+                decoratorProps: DropDownDecoratorProps(
+                  decoration: InputDecoration(
+                    labelText: 'Select Party First',
+                    labelStyle: TextStyle(color: Colors.grey.shade600),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  ),
+                ),
+                selectedItem: selectedParty,
+                onSelected: (val) {
                   setState(() {
                     selectedParty = val;
                   });
@@ -113,6 +131,7 @@ class _StockOutScannerViewState extends State<StockOutScannerView> {
                   
                   // Simple debounce
                   if (lastScanTime == null || DateTime.now().difference(lastScanTime!).inSeconds > 1) {
+                    SystemSound.play(SystemSoundType.alert);
                     lastScanTime = DateTime.now();
                     _handleScan(code);
                   }

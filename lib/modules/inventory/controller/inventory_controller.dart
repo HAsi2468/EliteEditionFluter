@@ -281,7 +281,13 @@ class InventoryController extends GetxController {
 
   void onProductSelected(dynamic product) {
     if (product == null) return;
-    itemNameController.text = product["description"] ?? "";
+    itemNameController.text = (product["description"]?.toString().isNotEmpty == true) 
+        ? product["description"] 
+        : (product["categoryName"]?.toString().isNotEmpty == true 
+            ? product["categoryName"] 
+            : (product["brand"]?.toString().isNotEmpty == true 
+                ? product["brand"] 
+                : (product["skuCode"] ?? "Unknown Item")));
     selectedSkuCode.value = product["skuCode"] ?? "";
     selectedImageUrl.value = product["imageUrl"] ?? "";
 
@@ -298,9 +304,8 @@ class InventoryController extends GetxController {
 
   Future<bool> addInventoryItem() async {
     if (selectedVendor.value.trim().isEmpty ||
-        itemNameController.text.trim().isEmpty ||
         selectedSize.value.trim().isEmpty) {
-      AppSnacks.errorSnack(message: "Party, Item Name, and Size are required.");
+      AppSnacks.errorSnack(message: "Party and Size are required.");
       return false;
     }
 
@@ -340,9 +345,8 @@ class InventoryController extends GetxController {
 
   Future<bool> updateInventoryItem(String id) async {
     if (selectedVendor.value.trim().isEmpty ||
-        itemNameController.text.trim().isEmpty ||
         selectedSize.value.trim().isEmpty) {
-      AppSnacks.errorSnack(message: "Vendor, Item Name, and Size are required.");
+      AppSnacks.errorSnack(message: "Vendor and Size are required.");
       return false;
     }
 
@@ -392,6 +396,23 @@ class InventoryController extends GetxController {
       }
     } catch (e) {
       print("Error deleting inventory item: $e");
+    } finally {
+      isActionLoading.value = false;
+    }
+  }
+
+  Future<void> deleteStockOutItem(String id) async {
+    try {
+      isActionLoading.value = true;
+
+      var res = await apiRepository.deleteStockOut(id);
+
+      if (res != false) {
+        AppSnacks.successSnack(message: "Stock out item deleted successfully.");
+        fetchStockOutList();
+      }
+    } catch (e) {
+      print("Error deleting stock out item: $e");
     } finally {
       isActionLoading.value = false;
     }
@@ -593,10 +614,9 @@ class InventoryController extends GetxController {
 
   void stageCurrentItem() {
     if (selectedVendor.value.trim().isEmpty ||
-        itemNameController.text.trim().isEmpty ||
         selectedSize.value.trim().isEmpty) {
       AppSnacks.errorSnack(
-           message: "Vendor, Item Name, and Size are required for all staged items.");
+           message: "Vendor and Size are required for all staged items.");
       return;
     }
 
@@ -739,6 +759,29 @@ class InventoryController extends GetxController {
     } catch (e) {
       AppSnacks.errorSnack(message: "Not enough stock or item not found.");
       print("Error submitting stock out: $e");
+    } finally {
+      isActionLoading.value = false;
+    }
+    return false;
+  }
+
+  Future<bool> updateStockOutItem(String id, String skuCode, String party, int qtyOut) async {
+    try {
+      isActionLoading.value = true;
+      var res = await apiRepository.updateStockOut(id, {
+        "skuCode": skuCode,
+        "party": party,
+        "qtyOut": qtyOut,
+      });
+      if (res != false) {
+        AppSnacks.successSnack(message: "Stock out updated successfully.");
+        fetchStockOutList();
+        fetchInventory(); // Refresh stock
+        return true;
+      }
+    } catch (e) {
+      AppSnacks.errorSnack(message: "Error updating stock out: $e");
+      print("Error updating stock out: $e");
     } finally {
       isActionLoading.value = false;
     }

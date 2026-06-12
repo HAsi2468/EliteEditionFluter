@@ -55,7 +55,7 @@ class ApiProvider extends GetxService {
     if (response.statusCode == 200 || response.statusCode == 201) {
       return result;
     } else {
-      AppSnacks.errorSnack(message: result['message']);
+      AppSnacks.errorSnack(message: result['message'] ?? result['error'] ?? 'Request failed');
       return false;
     }
   }

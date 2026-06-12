@@ -1,10 +1,10 @@
 import 'package:elite_edition/modules/inventory/view/stock_out_scanner_view.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:dropdown_search/dropdown_search.dart';
 import 'package:elite_edition/modules/inventory/controller/inventory_controller.dart';
 import 'package:elite_edition/modules/inventory/model/inventory_item_model.dart';
 import 'package:elite_edition/modules/inventory/model/vendor_model.dart';
-import 'package:elite_edition/modules/inventory/model/party_model.dart';
 import 'package:elite_edition/constants/app_color.dart';
 import 'package:elite_edition/constants/api_url.dart';
 import 'package:elite_edition/shared_widget/textfield_widget.dart';
@@ -12,8 +12,9 @@ import 'package:elite_edition/shared_widget/create_pdf.dart';
 import 'package:elite_edition/utils/pdf_helper.dart';
 import 'package:elite_edition/shared_widget/app_snacks.dart';
 import 'package:elite_edition/shared_widget/app_pdfview.dart';
-import 'package:elite_edition/shared_widget/create_inventory_pdf.dart';
+import 'package:elite_edition/shared_widget/create_inventory_csv.dart';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 
 class InventoryView extends GetView<InventoryController> {
   const InventoryView({super.key});
@@ -83,8 +84,6 @@ class InventoryView extends GetView<InventoryController> {
                   _showManageProductsDialog(context);
                 } else if (value == 'history') {
                   _showHistoryDialog(context);
-                } else if (value == 'report') {
-                  _showReportDateSelection(context);
                 }
               },
               itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
@@ -132,16 +131,6 @@ class InventoryView extends GetView<InventoryController> {
                     ],
                   ),
                 ),
-                PopupMenuItem<String>(
-                  value: 'report',
-                  child: Row(
-                    children: [
-                      Icon(Icons.picture_as_pdf_outlined, color: textColor, size: 18),
-                      const SizedBox(width: 8),
-                      Text('Generate Report', style: TextStyle(color: textColor)),
-                    ],
-                  ),
-                ),
               ],
             ),
             const SizedBox(width: 10),
@@ -152,18 +141,53 @@ class InventoryView extends GetView<InventoryController> {
             // Search Bar
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: TextFieldWidget(
-                imagePath: "assets/icons/Search.png",
-                controller: controller.searchController,
-                hintText: "Search by item name, SKU or party",
-                bgColor: searchBg,
-                borderColor:
-                    isDark ? AppColor.transparent : const Color(0xFFD1D5DB),
-                imgColor: textSecondary,
-                hintTextColour: textSecondary,
-                imgHeight: 25,
-                imgWidth: 25,
-                onChanged: (val) => controller.onSearchChanged(val),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextFieldWidget(
+                      imagePath: "assets/icons/Search.png",
+                      controller: controller.searchController,
+                      hintText: "Search by item name, SKU or party",
+                      bgColor: searchBg,
+                      borderColor:
+                          isDark ? AppColor.transparent : const Color(0xFFD1D5DB),
+                      imgColor: textSecondary,
+                      hintTextColour: textSecondary,
+                      imgHeight: 25,
+                      imgWidth: 25,
+                      onChanged: (val) => controller.onSearchChanged(val),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  InkWell(
+                    onTap: () => _showReportDateSelection(context),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      height: 48,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.teal.withOpacity(0.2) : Colors.teal.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: isDark ? Colors.teal.withOpacity(0.5) : Colors.teal.shade200)
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.download_rounded, color: isDark ? Colors.tealAccent : Colors.teal, size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            "Report",
+                            style: TextStyle(
+                              color: isDark ? Colors.tealAccent : Colors.teal,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            )
+                          )
+                        ],
+                      ),
+                    ),
+                  )
+                ],
               ),
             ),
 
@@ -636,6 +660,25 @@ class InventoryView extends GetView<InventoryController> {
   void _showAddEditDialog(BuildContext context, InventoryItemModel? item) {
     final bool isEdit = item != null;
 
+    if (isEdit) {
+      controller.selectedVendor.value = item.party;
+      controller.itemNameController.text = item.itemName;
+      controller.selectedSize.value = item.size;
+      controller.stockController.text = item.qty.toString();
+      controller.salePriceController.text = item.salePrice.toString();
+      controller.purchasePriceController.text = item.purchasePrice.toString();
+      controller.qtyController.text = item.qty.toString();
+      controller.selectedSkuCode.value = item.skuCode ?? '';
+      controller.selectedImageUrl.value = item.imageUrl ?? '';
+      if (item.date != null) {
+        controller.selectedDate.value = DateTime.tryParse(item.date!) ?? DateTime.now();
+      } else {
+        controller.selectedDate.value = DateTime.now();
+      }
+    } else {
+      controller.clearForm();
+    }
+
     Get.dialog(
       Dialog(
         backgroundColor: Colors.transparent,
@@ -694,37 +737,53 @@ class InventoryView extends GetView<InventoryController> {
                           final currentParty = controller.selectedVendor.value;
                           final isInList = controller.vendorsList
                               .any((p) => p.name == currentParty);
-                          return DropdownButtonFormField<String>(
-                            dropdownColor: dialogBg,
-                            initialValue: isInList ? currentParty : null,
-                            hint: Text("Select Vendor",
-                                style:
-                                    TextStyle(color: hintColor, fontSize: 14)),
-                            style: TextStyle(color: textColor, fontSize: 14),
-                            decoration: InputDecoration(
-                              fillColor: inputBg,
-                              filled: true,
-                              contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 10),
-                              enabledBorder: OutlineInputBorder(
-                                borderSide: BorderSide(color: borderCol),
-                                borderRadius: BorderRadius.circular(8),
+                          return DropdownSearch<String>(
+                            popupProps: PopupProps.menu(
+                              showSearchBox: true,
+                              searchFieldProps: TextFieldProps(
+                                style: TextStyle(color: textColor, fontSize: 14),
+                                decoration: InputDecoration(
+                                  hintText: "Search Vendor",
+                                  hintStyle: TextStyle(color: hintColor, fontSize: 14),
+                                  filled: true,
+                                  fillColor: inputBg,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                ),
                               ),
-                              focusedBorder: OutlineInputBorder(
-                                borderSide: BorderSide(
-                                    color: isDark
-                                        ? AppColor.primary600
-                                        : const Color(0xFF9CA3AF)),
-                                borderRadius: BorderRadius.circular(8),
+                              menuProps: MenuProps(backgroundColor: dialogBg),
+                            ),
+                            items: (filter, loadProps) {
+                              final query = filter.toLowerCase();
+                              return controller.vendorsList
+                                .map((p) => p.name)
+                                .where((name) => name.toLowerCase().contains(query))
+                                .toList();
+                            },
+                            decoratorProps: DropDownDecoratorProps(
+                              decoration: InputDecoration(
+                                hintText: "Select Vendor",
+                                hintStyle: TextStyle(color: hintColor, fontSize: 14),
+                                fillColor: inputBg,
+                                filled: true,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                enabledBorder: OutlineInputBorder(
+                                  borderSide: BorderSide(color: borderCol),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderSide: BorderSide(
+                                      color: isDark
+                                          ? AppColor.primary600
+                                          : const Color(0xFF9CA3AF)),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
                               ),
                             ),
-                            items: controller.vendorsList
-                                .map((p) => DropdownMenuItem<String>(
-                                      value: p.name,
-                                      child: Text(p.name),
-                                    ))
-                                .toList(),
-                            onChanged: (val) {
+                            selectedItem: isInList ? currentParty : null,
+                            onSelected: (val) {
                               if (val != null) {
                                 controller.selectedVendor.value = val;
                               }
@@ -761,79 +820,106 @@ class InventoryView extends GetView<InventoryController> {
                           final currentSku = controller.selectedSkuCode.value;
                           final isInList = controller.productsList
                               .any((p) => p["skuCode"] == currentSku);
-                          return DropdownButtonFormField<dynamic>(
-                            dropdownColor: dialogBg,
-                            isExpanded: true,
-                            initialValue: isInList
+                          return DropdownSearch<dynamic>(
+                            compareFn: (item, selectedItem) => item["skuCode"] == selectedItem["skuCode"],
+                            popupProps: PopupProps.menu(
+                              showSearchBox: true,
+                              searchFieldProps: TextFieldProps(
+                                style: TextStyle(color: textColor, fontSize: 14),
+                                decoration: InputDecoration(
+                                  hintText: "Search Product",
+                                  hintStyle: TextStyle(color: hintColor, fontSize: 14),
+                                  filled: true,
+                                  fillColor: inputBg,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                ),
+                              ),
+                              menuProps: MenuProps(backgroundColor: dialogBg),
+                              itemBuilder: (context, item, isSelected, isFocused) {
+                                final img = item["imageUrl"] ?? "";
+                                final name = item["description"] ?? "";
+                                final sku = item["skuCode"] ?? "";
+                                return ListTile(
+                                  leading: ClipRRect(
+                                    borderRadius: BorderRadius.circular(4),
+                                    child: Image.network(
+                                      ApiUrl.getFullImageUrl(img),
+                                      width: 32,
+                                      height: 32,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (c, e, s) => const Icon(Icons.image, size: 20, color: Colors.grey),
+                                    ),
+                                  ),
+                                  title: Text(name, style: TextStyle(fontSize: 14, color: textColor), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                  subtitle: Text(sku, style: TextStyle(fontSize: 12, color: hintColor)),
+                                );
+                              },
+                            ),
+                            items: (filter, loadProps) {
+                              final query = filter.toLowerCase();
+                              return controller.productsList.where((p) {
+                                final name = (p["description"] ?? "").toString().toLowerCase();
+                                final sku = (p["skuCode"] ?? "").toString().toLowerCase();
+                                return name.contains(query) || sku.contains(query);
+                              }).toList();
+                            },
+                            dropdownBuilder: (context, selectedItem) {
+                              if (selectedItem == null) {
+                                return Text("Select Product", style: TextStyle(color: hintColor, fontSize: 14));
+                              }
+                              final img = selectedItem["imageUrl"] ?? "";
+                              final name = selectedItem["description"] ?? "";
+                              final sku = selectedItem["skuCode"] ?? "";
+                              return Row(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(4),
+                                    child: Image.network(
+                                      ApiUrl.getFullImageUrl(img),
+                                      width: 28,
+                                      height: 28,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (c, e, s) => const Icon(Icons.image, size: 14, color: Colors.grey),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      "$name ($sku)",
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(color: textColor, fontSize: 13),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                            decoratorProps: DropDownDecoratorProps(
+                              decoration: InputDecoration(
+                                fillColor: inputBg,
+                                filled: true,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                enabledBorder: OutlineInputBorder(
+                                  borderSide: BorderSide(color: borderCol),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderSide: BorderSide(
+                                      color: isDark
+                                          ? AppColor.primary600
+                                          : const Color(0xFF9CA3AF)),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                            ),
+                            selectedItem: isInList
                                 ? controller.productsList.firstWhere(
                                     (p) => p["skuCode"] == currentSku)
                                 : null,
-                            hint: Text("Select Product",
-                                style:
-                                    TextStyle(color: hintColor, fontSize: 14)),
-                            style: TextStyle(color: textColor, fontSize: 14),
-                            decoration: InputDecoration(
-                              fillColor: inputBg,
-                              filled: true,
-                              contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 10),
-                              enabledBorder: OutlineInputBorder(
-                                borderSide: BorderSide(color: borderCol),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderSide: BorderSide(
-                                    color: isDark
-                                        ? AppColor.primary600
-                                        : const Color(0xFF9CA3AF)),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            items: controller.productsList.map((p) {
-                              final img = p["imageUrl"] ?? "";
-                              final name = p["description"] ?? "";
-                              final sku = p["skuCode"] ?? "";
-                              return DropdownMenuItem<dynamic>(
-                                value: p,
-                                child: Row(
-                                  children: [
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(4),
-                                      child: Container(
-                                        width: 28,
-                                        height: 28,
-                                        color: isDark
-                                            ? AppColor.primary800
-                                            : const Color(0xFFE5E7EB),
-                                        child: Image.network(
-                                          ApiUrl.getFullImageUrl(img),
-                                          width: 28,
-                                          height: 28,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (c, e, s) => Icon(
-                                              Icons.image,
-                                              size: 14,
-                                              color: isDark
-                                                  ? AppColor.primary600
-                                                  : const Color(0xFF6B7280)),
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        "$name ($sku)",
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                            color: textColor, fontSize: 13),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }).toList(),
-                            onChanged: (val) {
+                            onSelected: (val) {
                               if (val != null) {
                                 controller.onProductSelected(val);
                               }
@@ -1192,7 +1278,7 @@ class InventoryView extends GetView<InventoryController> {
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
+                        onPressed: () => Get.back(),
                         child: Text(
                           "Cancel",
                           style: TextStyle(color: labelColor, fontSize: 16),
@@ -1251,12 +1337,11 @@ class InventoryView extends GetView<InventoryController> {
                                   ),
                                 ),
                                 onPressed: () async {
-                                  final navigator = Navigator.of(context);
                                   if (isEdit) {
                                     final success = await controller
-                                        .updateInventoryItem(item.id);
+                                        .updateInventoryItem(item.id ?? '');
                                     if (success) {
-                                      navigator.pop();
+                                      Get.back();
                                     }
                                   } else {
                                     if (hasStaged) {
@@ -1272,13 +1357,13 @@ class InventoryView extends GetView<InventoryController> {
                                       final success = await controller
                                           .addStagedInventoryItems();
                                       if (success) {
-                                        navigator.pop();
+                                        Get.back();
                                       }
                                     } else {
                                       final success =
                                           await controller.addInventoryItem();
                                       if (success) {
-                                        navigator.pop();
+                                        Get.back();
                                       }
                                     }
                                   }
@@ -2522,6 +2607,78 @@ class InventoryView extends GetView<InventoryController> {
     );
   }
 
+  void _showEditStockOutDialog(BuildContext context, dynamic item, Color dialogBg, Color textColor, Color borderCol, Color labelColor) {
+    final TextEditingController qtyCtrl = TextEditingController(text: item['qtyOut']?.toString() ?? '1');
+    final RxBool isLoading = false.obs;
+
+    Get.dialog(
+      Dialog(
+        backgroundColor: dialogBg,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("Edit Stock Out", style: TextStyle(color: textColor, fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              Text("SKU Code: ${item['skuCode']}", style: TextStyle(color: textColor, fontWeight: FontWeight.w600)),
+              Text("Party: ${item['party']}", style: TextStyle(color: textColor)),
+              const SizedBox(height: 16),
+              Text("Quantity Out", style: TextStyle(color: labelColor, fontSize: 12)),
+              const SizedBox(height: 8),
+              TextField(
+                controller: qtyCtrl,
+                keyboardType: TextInputType.number,
+                style: TextStyle(color: textColor),
+                decoration: InputDecoration(
+                  enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: borderCol)),
+                  focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.teal)),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Get.back(),
+                    child: const Text("Cancel"),
+                  ),
+                  const SizedBox(width: 8),
+                  Obx(() => ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
+                    onPressed: isLoading.value ? null : () async {
+                      final int? qty = int.tryParse(qtyCtrl.text.trim());
+                      if (qty == null || qty <= 0) {
+                        AppSnacks.errorSnack(message: "Enter a valid quantity.");
+                        return;
+                      }
+                      isLoading.value = true;
+                      bool success = await controller.updateStockOutItem(
+                        item['_id'] ?? item['id'] ?? '', 
+                        item['skuCode'], 
+                        item['party'], 
+                        qty
+                      );
+                      isLoading.value = false;
+                      if (success) {
+                        Get.back(); // Close dialog
+                      }
+                    },
+                    child: isLoading.value
+                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Text("Save", style: TextStyle(color: Colors.white)),
+                  )),
+                ],
+              )
+            ],
+          ),
+        )
+      )
+    );
+  }
+
   Widget _buildStockInHistoryList(List<dynamic> filteredList, bool isDark, Color cardBg, Color textColor) {
     if (filteredList.isEmpty) {
       return const Center(child: Text("No Stock In history logs found", style: TextStyle(fontSize: 14)));
@@ -2543,118 +2700,141 @@ class InventoryView extends GetView<InventoryController> {
               }()
             : "N/A";
 
-        return Container(
-          decoration: BoxDecoration(
-            color: cardBg,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: Row(
-            children: [
-              Expanded(
-                flex: 3,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "#${filteredList.length - index} ($displayDate)",
-                      style: TextStyle(
-                        color: isDark ? Colors.greenAccent : Colors.green.shade800,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      item.party,
-                      style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 14),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 2),
-                                        Text(
-                                          "${item.itemName} (${item.skuCode})",
-                                          style: TextStyle(
-                                            color: labelColor,
-                                            fontSize: 12,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        icon: const Icon(Icons.print_rounded,
-                                            color: Colors.amber, size: 20),
-                                        tooltip: "Print Barcode",
-                                        onPressed: () async {
-                                          try {
-                                            final pdfBytes =
-                                                await generateBarcodePdf(
-                                                    item: item);
-                                            final fileName =
-                                                "Barcode_${item.skuCode}_${DateTime.now().millisecondsSinceEpoch}.pdf";
-                                            if (kIsWeb) {
-                                              await saveAndDownloadPdf(
-                                                  pdfBytes, fileName);
-                                              AppSnacks.successSnack(
-                                                  message:
-                                                      "Barcode downloaded successfully");
-                                            } else {
-                                              final filePath =
-                                                  await saveAndDownloadPdf(
-                                                      pdfBytes, fileName);
-                                              if (filePath != null) {
-                                                Get.to(() =>
-                                                    AppPdfView(path: filePath));
-                                              }
-                                            }
-                                          } catch (e) {
-                                            AppSnacks.errorSnack(
-                                                message:
-                                                    "Failed to generate barcode");
-                                          }
-                                        },
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(
-                                            Icons.visibility_rounded,
-                                            color: Colors.tealAccent,
-                                            size: 20),
-                                        tooltip: "View Details",
-                                        onPressed: () =>
-                                            _showViewItemDetailsDialog(
-                                                context, item),
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(Icons.edit_rounded,
-                                            color: Colors.lightBlueAccent,
-                                            size: 20),
-                                        tooltip: "Edit Item",
-                                        onPressed: () {
-                                          Navigator.of(context).pop();
-                                          controller.populateForm(item);
-                                          _showAddEditDialog(context, item);
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
+        return Theme(
+          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+          child: ExpansionTile(
+            collapsedBackgroundColor: cardBg,
+            backgroundColor: cardBg,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            collapsedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            childrenPadding: const EdgeInsets.only(left: 12, right: 12, bottom: 12),
+            title: Row(
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "#${filteredList.length - index} ($displayDate)",
+                        style: TextStyle(
+                          color: isDark ? Colors.greenAccent : Colors.green.shade800,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
                         ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        item.party ?? 'Unknown Party',
+                        style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 14),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        "${item.itemName ?? 'Unknown'} (${item.skuCode ?? 'Unknown'})",
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 12,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  flex: 1,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        "+${item.qty ?? item.currentlyAvailableStock ?? 0}",
+                        style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                      Text(
+                        "Qty In",
+                        style: TextStyle(color: isDark ? Colors.grey.shade400 : Colors.grey.shade600, fontSize: 10),
+                      )
+                    ],
+                  ),
                 ),
               ],
             ),
-          );
-        }),
-      ),
+            children: [
+              const Divider(height: 1),
+              const SizedBox(height: 8),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton.icon(
+                      icon: const Icon(Icons.qr_code, size: 16),
+                      label: const Text("Barcode", style: TextStyle(fontSize: 12)),
+                      onPressed: () async {
+                        try {
+                          final pdfData = await generateBarcodePdf(item: item);
+                          final fileName = "Barcode_${item.skuCode}.pdf";
+                          final filePath = await saveAndDownloadPdf(pdfData, fileName);
+                          if (filePath != null) {
+                            AppSnacks.successSnack(message: "Barcode downloaded successfully");
+                            Get.to(() => AppPdfView(path: filePath));
+                          }
+                        } catch(e) {
+                          AppSnacks.errorSnack(message: "Failed to download barcode: $e");
+                        }
+                      },
+                    ),
+                    TextButton.icon(
+                      icon: const Icon(Icons.visibility, size: 16),
+                      label: const Text("View", style: TextStyle(fontSize: 12)),
+                      onPressed: () => _showViewItemDetailsDialog(context, item),
+                    ),
+                    TextButton.icon(
+                      icon: const Icon(Icons.edit, size: 16),
+                      label: const Text("Edit", style: TextStyle(fontSize: 12)),
+                      onPressed: () {
+                        Get.back(); // close history dialog
+                        _showAddEditDialog(context, item);
+                      },
+                    ),
+                    TextButton.icon(
+                      icon: const Icon(Icons.delete, size: 16, color: Colors.red),
+                      label: const Text("Delete", style: TextStyle(fontSize: 12, color: Colors.red)),
+                      onPressed: () {
+                        Get.dialog(
+                          AlertDialog(
+                            title: const Text("Confirm Delete"),
+                            content: const Text("Are you sure you want to delete this stock in log?"),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Get.back(),
+                                child: const Text("Cancel"),
+                              ),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                                onPressed: () {
+                                  Get.back(); // close confirmation
+                                  if (item.id != null) {
+                                    controller.deleteInventoryItem(item.id!);
+                                  }
+                                },
+                                child: const Text("Delete", style: TextStyle(color: Colors.white)),
+                              ),
+                            ],
+                          )
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              )
+            ],
+          ),
+        );
+      },
     );
   }
   Widget _buildStockOutHistoryList(List<dynamic> filteredList, bool isDark, Color cardBg, Color textColor) {
@@ -2678,47 +2858,142 @@ class InventoryView extends GetView<InventoryController> {
               }()
             : "N/A";
 
-        return Container(
-          decoration: BoxDecoration(
-            color: cardBg,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: Row(
+        return Theme(
+          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+          child: ExpansionTile(
+            collapsedBackgroundColor: cardBg,
+            backgroundColor: cardBg,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            collapsedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            childrenPadding: const EdgeInsets.only(left: 12, right: 12, bottom: 12),
+            title: Row(
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "#${filteredList.length - index} ($displayDate)",
+                        style: TextStyle(
+                          color: isDark ? Colors.redAccent : Colors.red.shade800,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        item['party'] ?? 'Unknown Party',
+                        style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 14),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        "SKU: ${item['skuCode']} | Qty Out: ${item['qtyOut']}",
+                        style: TextStyle(
+                          color: isDark ? AppColor.primary600 : const Color(0xFF4B5563),
+                          fontSize: 12,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
             children: [
-              Expanded(
-                flex: 3,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              const Divider(height: 1),
+              const SizedBox(height: 8),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    Text(
-                      "#${filteredList.length - index} ($displayDate)",
-                      style: TextStyle(
-                        color: isDark ? Colors.redAccent : Colors.red.shade800,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
+                    TextButton.icon(
+                      icon: const Icon(Icons.visibility, size: 16),
+                      label: const Text("View", style: TextStyle(fontSize: 12)),
+                      onPressed: () {
+                        Get.dialog(
+                          Dialog(
+                            backgroundColor: cardBg,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            child: Padding(
+                              padding: const EdgeInsets.all(24.0),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text("Stock Out Details", style: TextStyle(color: textColor, fontSize: 18, fontWeight: FontWeight.bold)),
+                                  const SizedBox(height: 16),
+                                  Text("Party: ${item['party']}", style: TextStyle(color: textColor)),
+                                  const SizedBox(height: 8),
+                                  Text("SKU Code: ${item['skuCode']}", style: TextStyle(color: textColor)),
+                                  const SizedBox(height: 8),
+                                  Text("Quantity Out: ${item['qtyOut']}", style: TextStyle(color: textColor)),
+                                  const SizedBox(height: 8),
+                                  Text("Date: $displayDate", style: TextStyle(color: textColor)),
+                                  const SizedBox(height: 24),
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: ElevatedButton(
+                                      onPressed: () => Get.back(),
+                                      child: const Text("Close"),
+                                    ),
+                                  )
+                                ],
+                              ),
+                            )
+                          )
+                        );
+                      },
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      item['party'] ?? 'Unknown Party',
-                      style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 14),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    TextButton.icon(
+                      icon: const Icon(Icons.edit, size: 16),
+                      label: const Text("Edit", style: TextStyle(fontSize: 12)),
+                      onPressed: () {
+                        Get.back(); // close history dialog first
+                        // Pass colors for dialog
+                        final Color dialogBg = isDark ? AppColor.primary900 : Colors.white;
+                        final Color borderCol = isDark ? AppColor.primary800 : const Color(0xFFE5E7EB);
+                        final Color labelColor = isDark ? AppColor.primary600 : const Color(0xFF4B5563);
+                        _showEditStockOutDialog(context, item, dialogBg, textColor, borderCol, labelColor);
+                      },
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      "SKU: ${item['skuCode']} | Qty Out: ${item['qtyOut']}",
-                      style: TextStyle(
-                        color: isDark ? AppColor.primary600 : const Color(0xFF4B5563),
-                        fontSize: 12,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    TextButton.icon(
+                      icon: const Icon(Icons.delete, size: 16, color: Colors.red),
+                      label: const Text("Delete", style: TextStyle(fontSize: 12, color: Colors.red)),
+                      onPressed: () {
+                        Get.dialog(
+                          AlertDialog(
+                            title: const Text("Confirm Delete"),
+                            content: const Text("Are you sure you want to delete this stock out log?"),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Get.back(),
+                                child: const Text("Cancel"),
+                              ),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                                onPressed: () {
+                                  Get.back(); // close confirmation
+                                  final id = item['_id'] ?? item['id'];
+                                  if (id != null) {
+                                    controller.deleteStockOutItem(id.toString());
+                                  }
+                                },
+                                child: const Text("Delete", style: TextStyle(color: Colors.white)),
+                              ),
+                            ],
+                          )
+                        );
+                      },
                     ),
                   ],
                 ),
-              ),
+              )
             ],
           ),
         );
@@ -3329,7 +3604,7 @@ class InventoryView extends GetView<InventoryController> {
                   child: Text("Cancel", style: TextStyle(color: isDark ? Colors.white70 : Colors.black54)),
                 ),
                 ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: AppColor.primary600),
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent),
                   onPressed: () async {
                     Navigator.pop(context);
                     
@@ -3345,8 +3620,8 @@ class InventoryView extends GetView<InventoryController> {
                         endDate.toIso8601String()
                       );
                       
-                      // Generate PDF
-                      final Uint8List pdfData = await generateInventoryReportPdf(
+                      // Generate CSV
+                      final filePath = await generateInventoryReportCsv(
                         reportData: response,
                         startDate: startDate,
                         endDate: endDate,
@@ -3354,16 +3629,60 @@ class InventoryView extends GetView<InventoryController> {
                       
                       Get.back(); // close loading
                       
-                      Get.to(() => AppPdfView(
-                        bytes: pdfData,
-                        pdfName: "Inventory_Report_${startDate.day}-${startDate.month}-${startDate.year}",
-                      ));
-                    } catch (e) {
+                      if (kIsWeb) {
+                        AppSnacks.successSnack(message: "CSV Report downloaded successfully");
+                      } else {
+                        AppSnacks.successSnack(message: "CSV Report saved to $filePath");
+                      }
+                    } catch (e, stacktrace) {
                       Get.back(); // close loading
-                      AppSnacks.errorSnack(message: "Failed to generate report: $e");
+                      print("Exception in generateInventoryReportCsv: $e\n$stacktrace");
+                      AppSnacks.errorSnack(message: "Failed to generate CSV: $e");
                     }
                   },
-                  child: const Text("Generate Report", style: TextStyle(color: Colors.white)),
+                  child: const Text("Download CSV", style: TextStyle(color: Colors.white)),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: AppColor.primary600),
+                  onPressed: () async {
+                    Navigator.pop(context);
+                    
+                    // Show loading
+                    Get.dialog(
+                      const Center(child: CircularProgressIndicator()),
+                      barrierDismissible: false
+                    );
+                    
+                    try {
+                      final startStr = "${startDate.year}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}";
+                      final endStr = "${endDate.year}-${endDate.month.toString().padLeft(2, '0')}-${endDate.day.toString().padLeft(2, '0')}";
+                      final reportUrl = "${ApiUrl.baseUrl}/inventory/report/pdf?dateStart=$startStr&dateEnd=$endStr";
+                      
+                      final response = await http.get(Uri.parse(reportUrl));
+                      if (response.statusCode != 200) {
+                        throw Exception("Backend returned status code ${response.statusCode}");
+                      }
+                      final Uint8List pdfData = response.bodyBytes;
+                      
+                      Get.back(); // close loading
+                      
+                      final fileName = "Inventory_Report_${startDate.day}-${startDate.month}-${startDate.year}.pdf";
+                      if (kIsWeb) {
+                        await saveAndDownloadPdf(pdfData, fileName);
+                        AppSnacks.successSnack(message: "Report downloaded successfully");
+                      } else {
+                        final filePath = await saveAndDownloadPdf(pdfData, fileName);
+                        if (filePath != null) {
+                          Get.to(() => AppPdfView(path: filePath));
+                        }
+                      }
+                    } catch (e, stacktrace) {
+                      Get.back(); // close loading
+                      print("Exception in downloading backend PDF: $e\n$stacktrace");
+                      AppSnacks.errorSnack(message: "Failed to download PDF: $e");
+                    }
+                  },
+                  child: const Text("Download PDF", style: TextStyle(color: Colors.white)),
                 ),
               ],
             );

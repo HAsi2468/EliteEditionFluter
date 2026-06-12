@@ -19,7 +19,8 @@ Future<Uint8List> generateInventoryReportPdf({
   Future<pw.MemoryImage?> _fetchImage(String imageUrl) async {
     if (imageUrl.isEmpty) return null;
     try {
-      final response = await http.get(Uri.parse(ApiUrl.imageBaseUrl + imageUrl));
+      final String fullUrl = ApiUrl.getFullImageUrl(imageUrl);
+      final response = await http.get(Uri.parse(fullUrl));
       if (response.statusCode == 200) {
         return pw.MemoryImage(response.bodyBytes);
       }
@@ -32,31 +33,39 @@ Future<Uint8List> generateInventoryReportPdf({
   // Pre-fetch images
   Map<String, pw.MemoryImage?> imageCache = {};
   
-  Future<void> prefetchSectionImages(Map<String, dynamic> section) async {
-    if (section['items'] != null) {
-      for (var item in section['items']) {
-        if (item['imageUrl'] != null && item['imageUrl'].toString().isNotEmpty) {
-          if (!imageCache.containsKey(item['imageUrl'])) {
-            imageCache[item['imageUrl']] = await _fetchImage(item['imageUrl']);
+  Future<void> prefetchAllImages() async {
+    final Set<String> uniqueUrls = {};
+    
+    for (var sectionKey in ['currentStock', 'stockIn', 'stockOut']) {
+      final section = reportData[sectionKey] ?? {};
+      if (section['items'] != null) {
+        for (var item in section['items']) {
+          if (item['imageUrl'] != null && item['imageUrl'].toString().isNotEmpty) {
+            uniqueUrls.add(item['imageUrl'].toString());
           }
         }
       }
     }
+
+    // Process concurrently in chunks of 50 to avoid connection limits
+    final urls = uniqueUrls.toList();
+    for (var i = 0; i < urls.length; i += 50) {
+      final chunk = urls.sublist(i, i + 50 > urls.length ? urls.length : i + 50);
+      await Future.wait(chunk.map((url) async {
+        imageCache[url] = await _fetchImage(url);
+      }));
+    }
   }
 
-  await prefetchSectionImages(reportData['currentStock'] ?? {});
-  await prefetchSectionImages(reportData['stockIn'] ?? {});
-  await prefetchSectionImages(reportData['stockOut'] ?? {});
+  await prefetchAllImages();
 
-  pw.Widget _buildSectionTable(String title, Map<String, dynamic> sectionData) {
+  List<pw.Widget> _buildSectionTable(String title, Map<String, dynamic> sectionData) {
     final int totalOrderQuantity = sectionData['totalOrderQuantity'] ?? 0;
     final double totalSellableAmount = (sectionData['totalSellableAmount'] ?? 0).toDouble();
     final List<dynamic> items = sectionData['items'] ?? [];
 
     if (items.isEmpty) {
-      return pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
+      return [
           pw.Container(
             padding: const pw.EdgeInsets.all(5),
             color: PdfColors.grey300,
@@ -70,14 +79,10 @@ Future<Uint8List> generateInventoryReportPdf({
             child: pw.Text("No data available for this section.", style: pw.TextStyle(font: fontRegular, fontSize: 10)),
           ),
           pw.SizedBox(height: 10),
-        ]
-      );
+      ];
     }
-
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        // Section Header
+    return [
+      // Section Header
         pw.Container(
           decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey)),
           child: pw.Column(
@@ -123,12 +128,14 @@ Future<Uint8List> generateInventoryReportPdf({
           padding: const pw.EdgeInsets.all(5),
           child: pw.Row(
             children: [
-              pw.Expanded(flex: 2, child: pw.Text("Image", style: pw.TextStyle(font: fontBold, fontSize: 10), textAlign: pw.TextAlign.center)),
+              pw.Expanded(flex: 1, child: pw.Text("Image", style: pw.TextStyle(font: fontBold, fontSize: 10), textAlign: pw.TextAlign.center)),
               pw.Expanded(flex: 2, child: pw.Text("Sku", style: pw.TextStyle(font: fontBold, fontSize: 10), textAlign: pw.TextAlign.center)),
-              pw.Expanded(flex: 2, child: pw.Text("Size", style: pw.TextStyle(font: fontBold, fontSize: 10), textAlign: pw.TextAlign.center)),
-              pw.Expanded(flex: 2, child: pw.Text("Total", style: pw.TextStyle(font: fontBold, fontSize: 10), textAlign: pw.TextAlign.center)),
-              pw.Expanded(flex: 2, child: pw.Text("Total Purches Amount", style: pw.TextStyle(font: fontBold, fontSize: 10), textAlign: pw.TextAlign.center)),
-              pw.Expanded(flex: 2, child: pw.Text("Total Sallable Amount", style: pw.TextStyle(font: fontBold, fontSize: 10), textAlign: pw.TextAlign.center)),
+              pw.Expanded(flex: 2, child: pw.Text("Vendor", style: pw.TextStyle(font: fontBold, fontSize: 10), textAlign: pw.TextAlign.center)),
+              pw.Expanded(flex: 1, child: pw.Text("Size", style: pw.TextStyle(font: fontBold, fontSize: 10), textAlign: pw.TextAlign.center)),
+              pw.Expanded(flex: 1, child: pw.Text("Total", style: pw.TextStyle(font: fontBold, fontSize: 10), textAlign: pw.TextAlign.center)),
+              pw.Expanded(flex: 2, child: pw.Text("Purchase Amount", style: pw.TextStyle(font: fontBold, fontSize: 10), textAlign: pw.TextAlign.center)),
+              pw.Expanded(flex: 2, child: pw.Text("Sellable Amount", style: pw.TextStyle(font: fontBold, fontSize: 10), textAlign: pw.TextAlign.center)),
+              pw.Expanded(flex: 2, child: pw.Text("Profit", style: pw.TextStyle(font: fontBold, fontSize: 10), textAlign: pw.TextAlign.center)),
             ]
           )
         ),
@@ -151,7 +158,7 @@ Future<Uint8List> generateInventoryReportPdf({
               children: [
                 // Image
                 pw.Expanded(
-                  flex: 2,
+                  flex: 1,
                   child: pw.Container(
                     decoration: const pw.BoxDecoration(border: pw.Border(right: pw.BorderSide(color: PdfColors.grey))),
                     padding: const pw.EdgeInsets.all(5),
@@ -171,9 +178,19 @@ Future<Uint8List> generateInventoryReportPdf({
                     child: pw.Text(item['sku'].toString(), style: pw.TextStyle(font: fontRegular, fontSize: 10))
                   )
                 ),
-                // Sizes & inner Qtys
+                // Vendor
                 pw.Expanded(
                   flex: 2,
+                  child: pw.Container(
+                    decoration: const pw.BoxDecoration(border: pw.Border(right: pw.BorderSide(color: PdfColors.grey))),
+                    padding: const pw.EdgeInsets.all(5),
+                    alignment: pw.Alignment.center,
+                    child: pw.Text(item['party']?.toString() ?? '-', style: pw.TextStyle(font: fontRegular, fontSize: 10))
+                  )
+                ),
+                // Sizes & inner Qtys
+                pw.Expanded(
+                  flex: 1,
                   child: pw.Container(
                     decoration: const pw.BoxDecoration(border: pw.Border(right: pw.BorderSide(color: PdfColors.grey))),
                     child: pw.Column(
@@ -195,7 +212,7 @@ Future<Uint8List> generateInventoryReportPdf({
                 ),
                 // Total
                 pw.Expanded(
-                  flex: 2,
+                  flex: 1,
                   child: pw.Container(
                     decoration: const pw.BoxDecoration(border: pw.Border(right: pw.BorderSide(color: PdfColors.grey))),
                     padding: const pw.EdgeInsets.all(5),
@@ -217,9 +234,22 @@ Future<Uint8List> generateInventoryReportPdf({
                 pw.Expanded(
                   flex: 2,
                   child: pw.Container(
+                    decoration: const pw.BoxDecoration(border: pw.Border(right: pw.BorderSide(color: PdfColors.grey))),
                     padding: const pw.EdgeInsets.all(5),
                     alignment: pw.Alignment.center,
                     child: pw.Text(item['totalSellableAmount'].toString(), style: pw.TextStyle(font: fontRegular, fontSize: 10))
+                  )
+                ),
+                // Profit
+                pw.Expanded(
+                  flex: 2,
+                  child: pw.Container(
+                    padding: const pw.EdgeInsets.all(5),
+                    alignment: pw.Alignment.center,
+                    child: pw.Text(
+                      ((item['totalSellableAmount'] as num? ?? 0) - (item['totalPurchaseAmount'] as num? ?? 0)).toStringAsFixed(2),
+                      style: pw.TextStyle(font: fontRegular, fontSize: 10)
+                    )
                   )
                 ),
               ]
@@ -227,14 +257,14 @@ Future<Uint8List> generateInventoryReportPdf({
           );
         }).toList(),
         pw.SizedBox(height: 20),
-      ]
-    );
+    ];
   }
 
   // Build Pages
   pdf.addPage(
     pw.MultiPage(
       pageFormat: PdfPageFormat.a4,
+      maxPages: 200,
       margin: const pw.EdgeInsets.all(32),
       build: (pw.Context context) {
         return [
@@ -251,9 +281,9 @@ Future<Uint8List> generateInventoryReportPdf({
           ),
           pw.SizedBox(height: 10),
           
-          _buildSectionTable("Current stock", reportData['currentStock'] ?? {}),
-          _buildSectionTable("Stock in", reportData['stockIn'] ?? {}),
-          _buildSectionTable("Stock out", reportData['stockOut'] ?? {}),
+          ..._buildSectionTable("Current stock", reportData['currentStock'] ?? {}),
+          ..._buildSectionTable("Stock in", reportData['stockIn'] ?? {}),
+          ..._buildSectionTable("Stock out", reportData['stockOut'] ?? {}),
         ];
       },
     ),

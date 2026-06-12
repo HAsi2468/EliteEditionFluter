@@ -1,7 +1,7 @@
-abstract class ApiUrl{
-  static const String baseUrl = "http://localhost:3001/v1";
-  // static const String baseUrl = "http://3.7.174.180:3001/v1";
-  // static const String baseUrl = "https://elite_edition.api.rdtextiles.com/v1";
+abstract class ApiUrl {
+  // static const String baseUrl = "http://localhost:3001/v1";
+  static const String baseUrl = "http://3.7.174.180:3001/v1";
+  //static const String baseUrl = "https://elite_edition.api.rdtextiles.com/v1";
   // static const String baseUrl = "http://127.0.0.1:3001/v1";
   static const String register = "auth/register";
   static const String login = "auth/login";
@@ -18,7 +18,8 @@ abstract class ApiUrl{
   static const String productBase = "products";
 
   static String getFullImageUrl(String? url) {
-    if (url == null || url.isEmpty || url == "null") return "https://placehold.co/600x400/png?text=Elite+Edition";
+    if (url == null || url.isEmpty || url == "null")
+      return "https://placehold.co/600x400/png?text=Elite+Edition";
     if (url.startsWith("http://") || url.startsWith("https://")) {
       return url;
     }
