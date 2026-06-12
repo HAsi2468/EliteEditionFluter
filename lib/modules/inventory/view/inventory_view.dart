@@ -13,6 +13,7 @@ import 'package:elite_edition/utils/pdf_helper.dart';
 import 'package:elite_edition/shared_widget/app_snacks.dart';
 import 'package:elite_edition/shared_widget/app_pdfview.dart';
 import 'package:elite_edition/shared_widget/create_inventory_csv.dart';
+import 'package:elite_edition/shared_widget/app_loader.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
@@ -3638,11 +3639,7 @@ class InventoryView extends GetView<InventoryController> {
                   onPressed: () async {
                     Navigator.pop(context);
                     
-                    // Show loading
-                    Get.dialog(
-                      const Center(child: CircularProgressIndicator()),
-                      barrierDismissible: false
-                    );
+                    AppLoader.show();
                     
                     try {
                       var response = await controller.apiRepository.getInventoryReport(
@@ -3657,7 +3654,7 @@ class InventoryView extends GetView<InventoryController> {
                         endDate: endDate,
                       );
                       
-                      Get.back(); // close loading
+                      await AppLoader.hide(); // close loading
                       
                       if (kIsWeb) {
                         AppSnacks.successSnack(message: "CSV Report downloaded successfully");
@@ -3665,7 +3662,7 @@ class InventoryView extends GetView<InventoryController> {
                         AppSnacks.successSnack(message: "CSV Report saved to $filePath");
                       }
                     } catch (e, stacktrace) {
-                      Get.back(); // close loading
+                      await AppLoader.hide(); // close loading
                       print("Exception in generateInventoryReportCsv: $e\n$stacktrace");
                       AppSnacks.errorSnack(message: "Failed to generate CSV: $e");
                     }
@@ -3677,11 +3674,7 @@ class InventoryView extends GetView<InventoryController> {
                   onPressed: () async {
                     Navigator.pop(context);
                     
-                    // Show loading
-                    Get.dialog(
-                      const Center(child: CircularProgressIndicator()),
-                      barrierDismissible: false
-                    );
+                    AppLoader.show();
                     
                     try {
                       final startStr = "${startDate.year}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}";
@@ -3694,10 +3687,10 @@ class InventoryView extends GetView<InventoryController> {
                         fileName = "Stock_Value_Report_${DateTime.now().day}-${DateTime.now().month}-${DateTime.now().year}.pdf";
                       } else if (reportType == "inward") {
                         reportUrl = "${ApiUrl.baseUrl}/inventory/report/stock-inward?dateStart=$startStr&dateEnd=$endStr";
-                        fileName = "Stock_Inward_Report_${startStr}.pdf";
+                        fileName = "Stock_Inward_Report_$startStr.pdf";
                       } else {
                         reportUrl = "${ApiUrl.baseUrl}/inventory/report/stock-outward?dateStart=$startStr&dateEnd=$endStr";
-                        fileName = "Stock_Outward_Report_${startStr}.pdf";
+                        fileName = "Stock_Outward_Report_$startStr.pdf";
                       }
                       
                       final response = await http.get(Uri.parse(reportUrl));
@@ -3706,7 +3699,7 @@ class InventoryView extends GetView<InventoryController> {
                       }
                       final Uint8List pdfData = response.bodyBytes;
                       
-                      Get.back(); // close loading
+                      await AppLoader.hide(); // close loading
                       
                       if (kIsWeb) {
                         await saveAndDownloadPdf(pdfData, fileName);
@@ -3718,7 +3711,7 @@ class InventoryView extends GetView<InventoryController> {
                         }
                       }
                     } catch (e, stacktrace) {
-                      Get.back(); // close loading
+                      await AppLoader.hide(); // close loading
                       print("Exception in downloading backend PDF: $e\n$stacktrace");
                       AppSnacks.errorSnack(message: "Failed to download PDF: $e");
                     }

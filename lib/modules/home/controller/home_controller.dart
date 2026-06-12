@@ -10,6 +10,7 @@ import 'package:elite_edition/model/report_datamodel.dart';
 import 'package:elite_edition/shared_widget/app_pdfview.dart';
 import 'package:elite_edition/shared_widget/app_share.dart';
 import 'package:elite_edition/shared_widget/create_pdf.dart';
+import 'package:elite_edition/shared_widget/app_loader.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:elite_edition/utils/pdf_helper.dart';
 import 'package:elite_edition/shared_widget/app_snacks.dart';
@@ -558,18 +559,8 @@ class HomeController extends GetxService {
 
   getReport(bool isDownload) async {
     try {
-      Get.back();
-      Get.dialog(
-        Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(
-              color: AppColor.white,
-            ),
-          ],
-        ),
-        barrierDismissible: false,
-      );
+      Get.back(); // Close select dialog
+      AppLoader.show();
 
       final startStr = "${selectStartDate.year}-${selectStartDate.month.toString().padLeft(2, '0')}-${selectStartDate.day.toString().padLeft(2, '0')}";
       final endStr = "${selectEndDate.year}-${selectEndDate.month.toString().padLeft(2, '0')}-${selectEndDate.day.toString().padLeft(2, '0')}";
@@ -578,10 +569,10 @@ class HomeController extends GetxService {
       String fileName;
       if (selectedReportType.value == "brand") {
         reportUrl = "${ApiUrl.baseUrl}/salesList/report/pdf?type=brand&dateStart=$startStr&dateEnd=$endStr";
-        fileName = "Brand_Report_${startStr}.pdf";
+        fileName = "Brand_Report_$startStr.pdf";
       } else {
         reportUrl = "${ApiUrl.baseUrl}/salesList/report/pdf?type=sales&dateStart=$startStr&dateEnd=$endStr";
-        fileName = "Sales_Report_${startStr}.pdf";
+        fileName = "Sales_Report_$startStr.pdf";
       }
 
       final response = await http.get(Uri.parse(reportUrl));
@@ -589,7 +580,7 @@ class HomeController extends GetxService {
         throw Exception("Backend returned status code ${response.statusCode}");
       }
       final Uint8List pdfBytes = response.bodyBytes;
-      Get.back(); // close loading
+      await AppLoader.hide(); // close loading
 
       if (kIsWeb) {
         if (isDownload) {
@@ -614,7 +605,7 @@ class HomeController extends GetxService {
         }
       }
     } catch (e, s) {
-      Get.back(); // close loading
+      await AppLoader.hide(); // close loading
       debugPrint("Error on getReport() => $e \n $s");
       AppSnacks.errorSnack(message: "Failed to download PDF: $e");
     }

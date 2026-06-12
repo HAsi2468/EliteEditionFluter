@@ -15,6 +15,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:image/image.dart' as img;
 import 'package:share_plus/share_plus.dart';
 import 'package:elite_edition/shared_widget/app_snacks.dart';
+import 'package:elite_edition/shared_widget/app_loader.dart';
 import 'package:elite_edition/utils/pdf_helper.dart';
 import 'package:flutter/foundation.dart';
 
@@ -264,19 +265,8 @@ class ProductDetailsController extends GetxController {
 
   getReport(bool isDownload) async {
     try {
-      Get.back();
-      Get.dialog(
-        Column(
-          // mainAxisSize: MainAxisSize.max,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(
-              color: AppColor.white,
-            ),
-          ],
-        ),
-        barrierDismissible: false,
-      );
+      Get.back(); // close date select sheet/dialog
+      AppLoader.show();
 
       final Map<String, String> queryParams = {
         "dateStart":
@@ -295,7 +285,7 @@ class ProductDetailsController extends GetxController {
             endDate: selectEndDate,
           );
           final fileName = "Brand_Report_${DateTime.now().millisecondsSinceEpoch}.pdf";
-          Get.back();
+          await AppLoader.hide();
 
           if (kIsWeb) {
             if (isDownload) {
@@ -319,7 +309,7 @@ class ProductDetailsController extends GetxController {
             }
           }
         } else {
-          Get.back();
+          await AppLoader.hide();
         }
       } else {
         var res = await apiRepository.getReport(queryParams, isLog: true);
@@ -340,7 +330,7 @@ class ProductDetailsController extends GetxController {
             sku: skuCode,
           );
           final fileName = "Report_${DateTime.now().millisecondsSinceEpoch}.pdf";
-          Get.back();
+          await AppLoader.hide();
 
           if (kIsWeb) {
             if (isDownload) {
@@ -364,11 +354,11 @@ class ProductDetailsController extends GetxController {
             }
           }
         } else {
-          Get.back();
+          await AppLoader.hide();
         }
       }
     } catch (e, s) {
-      Get.back();
+      await AppLoader.hide();
       debugPrint("Error on getReport() => $e \n $s");
     }
   }
