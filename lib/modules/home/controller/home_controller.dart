@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:http/http.dart' as http;
 import 'package:elite_edition/constants/app_color.dart';
 import 'package:elite_edition/data/api_repository.dart';
 import 'package:elite_edition/model/filter_datamodel.dart';
@@ -559,7 +560,6 @@ class HomeController extends GetxService {
       Get.back();
       Get.dialog(
         Column(
-          // mainAxisSize: MainAxisSize.max,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             CircularProgressIndicator(
@@ -570,95 +570,52 @@ class HomeController extends GetxService {
         barrierDismissible: false,
       );
 
-      final Map<String, String> queryParams = {
-        "dateStart":
-            "${selectStartDate.year}-${selectStartDate.month}-${selectStartDate.day}",
-        "dateEnd":
-            "${selectEndDate.year}-${selectEndDate.month}-${selectEndDate.day}",
-      };
+      final startStr = "${selectStartDate.year}-${selectStartDate.month.toString().padLeft(2, '0')}-${selectStartDate.day.toString().padLeft(2, '0')}";
+      final endStr = "${selectEndDate.year}-${selectEndDate.month.toString().padLeft(2, '0')}-${selectEndDate.day.toString().padLeft(2, '0')}";
 
+      String reportUrl;
+      String fileName;
       if (selectedReportType.value == "brand") {
-        var res = await apiRepository.getBrandReport(queryParams, isLog: false);
-        if (res != false && res != null) {
-          final pdfBytes = await generateBrandPdf(
-            brandReportData: res,
-            startDate: selectStartDate,
-            endDate: selectEndDate,
-          );
-          final fileName =
-              "Brand_Report_${DateTime.now().millisecondsSinceEpoch}.pdf";
-          Get.back();
+        reportUrl = "${ApiUrl.baseUrl}/salesList/report/pdf?type=brand&dateStart=$startStr&dateEnd=$endStr";
+        fileName = "Brand_Report_${startStr}.pdf";
+      } else {
+        reportUrl = "${ApiUrl.baseUrl}/salesList/report/pdf?type=sales&dateStart=$startStr&dateEnd=$endStr";
+        fileName = "Sales_Report_${startStr}.pdf";
+      }
 
-          if (kIsWeb) {
-            if (isDownload) {
-              await saveAndDownloadPdf(pdfBytes, fileName);
-              AppSnacks.successSnack(
-                  message: "Brand report downloaded successfully");
-            } else {
-              await AppShare.shareFile(XFile.fromData(
-                pdfBytes,
-                mimeType: 'application/pdf',
-                name: fileName,
-              ));
-            }
-          } else {
-            final filePath = await saveAndDownloadPdf(pdfBytes, fileName);
-            if (filePath != null) {
-              if (isDownload) {
-                Get.to(() => AppPdfView(path: filePath));
-              } else {
-                AppShare.shareFile(XFile(filePath));
-              }
-            }
-          }
+      final response = await http.get(Uri.parse(reportUrl));
+      if (response.statusCode != 200) {
+        throw Exception("Backend returned status code ${response.statusCode}");
+      }
+      final Uint8List pdfBytes = response.bodyBytes;
+      Get.back(); // close loading
+
+      if (kIsWeb) {
+        if (isDownload) {
+          await saveAndDownloadPdf(pdfBytes, fileName);
+          AppSnacks.successSnack(
+              message: "${selectedReportType.value == "brand" ? "Brand" : "Sales"} report downloaded successfully");
         } else {
-          Get.back();
+          await AppShare.shareFile(XFile.fromData(
+            pdfBytes,
+            mimeType: 'application/pdf',
+            name: fileName,
+          ));
         }
       } else {
-        var res = await apiRepository.getReport(queryParams, isLog: false);
-        if (res != false) {
-          var data = List<ReportDataModel>.from(
-              res.map((x) => ReportDataModel.fromJson(x)));
-          await enrichReports(data);
-          reportDataList.value = data;
-
-          final pdfBytes = await generatePdf(
-            reportList: reportDataList.value,
-            startDate: selectStartDate,
-            endDate: selectEndDate,
-          );
-          final fileName =
-              "Report_${DateTime.now().millisecondsSinceEpoch}.pdf";
-          Get.back();
-
-          if (kIsWeb) {
-            if (isDownload) {
-              await saveAndDownloadPdf(pdfBytes, fileName);
-              AppSnacks.successSnack(message: "Report downloaded successfully");
-            } else {
-              await AppShare.shareFile(XFile.fromData(
-                pdfBytes,
-                mimeType: 'application/pdf',
-                name: fileName,
-              ));
-            }
+        final filePath = await saveAndDownloadPdf(pdfBytes, fileName);
+        if (filePath != null) {
+          if (isDownload) {
+            Get.to(() => AppPdfView(path: filePath));
           } else {
-            final filePath = await saveAndDownloadPdf(pdfBytes, fileName);
-            if (filePath != null) {
-              if (isDownload) {
-                Get.to(() => AppPdfView(path: filePath));
-              } else {
-                AppShare.shareFile(XFile(filePath));
-              }
-            }
+            AppShare.shareFile(XFile(filePath));
           }
-        } else {
-          Get.back();
         }
       }
     } catch (e, s) {
-      Get.back();
+      Get.back(); // close loading
       debugPrint("Error on getReport() => $e \n $s");
+      AppSnacks.errorSnack(message: "Failed to download PDF: $e");
     }
   }
 }

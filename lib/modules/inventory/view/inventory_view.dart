@@ -608,7 +608,7 @@ class InventoryView extends GetView<InventoryController> {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        "₹${item.salePrice.toStringAsFixed(0)}",
+                        item.salePrice.toStringAsFixed(0),
                         style: TextStyle(
                           color: isDark
                               ? Colors.cyanAccent
@@ -1118,12 +1118,12 @@ class InventoryView extends GetView<InventoryController> {
                       keyboardType: TextInputType.number, enabled: false),
                   const SizedBox(height: 12),
                   _buildFormInput(
-                      "Purchase Price (₹)", controller.purchasePriceController,
+                      "Purchase Price", controller.purchasePriceController,
                       keyboardType:
                           const TextInputType.numberWithOptions(decimal: true)),
                   const SizedBox(height: 12),
                   _buildFormInput(
-                      "Sale Price (₹)", controller.salePriceController,
+                      "Sale Price", controller.salePriceController,
                       keyboardType:
                           const TextInputType.numberWithOptions(decimal: true)),
 
@@ -1242,7 +1242,7 @@ class InventoryView extends GetView<InventoryController> {
                                             ),
                                           ),
                                           Text(
-                                            "Buy: ₹$purchasePrice | Sell: ₹$salePrice",
+                                            "Buy: $purchasePrice | Sell: $salePrice",
                                             style: TextStyle(
                                               color: isDark
                                                   ? Colors.cyanAccent
@@ -3206,13 +3206,13 @@ class InventoryView extends GetView<InventoryController> {
                       const Divider(height: 1, thickness: 0.5),
                       _buildDetailRow(
                           "Purchase Price",
-                          "₹${item.purchasePrice.toStringAsFixed(2)}",
+                          item.purchasePrice.toStringAsFixed(2),
                           textColor,
                           labelColor),
                       const Divider(height: 1, thickness: 0.5),
                       _buildDetailRow(
                           "Total Cost",
-                          "₹${totalCost.toStringAsFixed(2)}",
+                          totalCost.toStringAsFixed(2),
                           isDark ? Colors.greenAccent : Colors.green.shade800,
                           labelColor,
                           isBoldVal: true),
@@ -3535,6 +3535,7 @@ class InventoryView extends GetView<InventoryController> {
   void _showReportDateSelection(BuildContext context) {
     DateTime startDate = DateTime.now();
     DateTime endDate = DateTime.now();
+    String reportType = "value"; // "value", "inward", "outward"
 
     showDialog(
       context: context,
@@ -3546,56 +3547,85 @@ class InventoryView extends GetView<InventoryController> {
 
             return AlertDialog(
               backgroundColor: isDark ? AppColor.primary800 : Colors.white,
-              title: Text("Select Report Date Range", style: TextStyle(color: textColor)),
+              title: Text("Select Stock Report", style: TextStyle(color: textColor)),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextButton.icon(
-                          icon: Icon(Icons.calendar_today, color: textColor),
-                          label: Text("${startDate.day}-${startDate.month}-${startDate.year}", style: TextStyle(color: textColor)),
-                          onPressed: () async {
-                            DateTime? picked = await showDatePicker(
-                              context: context,
-                              initialDate: startDate,
-                              firstDate: DateTime(2000),
-                              lastDate: DateTime(2101),
-                            );
-                            if (picked != null) {
-                              setDialogState(() {
-                                startDate = picked;
-                                if (endDate.isBefore(startDate)) {
-                                  endDate = startDate;
-                                }
-                              });
-                            }
-                          },
-                        ),
+                  DropdownButtonFormField<String>(
+                    value: reportType,
+                    dropdownColor: isDark ? AppColor.primary800 : Colors.white,
+                    style: TextStyle(color: textColor, fontSize: 14),
+                    decoration: InputDecoration(
+                      labelText: "Report Type",
+                      labelStyle: TextStyle(color: textColor.withOpacity(0.7)),
+                      enabledBorder: UnderlineInputBorder(
+                        borderSide: BorderSide(color: textColor.withOpacity(0.3)),
                       ),
-                      Text(" to ", style: TextStyle(color: textColor)),
-                      Expanded(
-                        child: TextButton.icon(
-                          icon: Icon(Icons.calendar_today, color: textColor),
-                          label: Text("${endDate.day}-${endDate.month}-${endDate.year}", style: TextStyle(color: textColor)),
-                          onPressed: () async {
-                            DateTime? picked = await showDatePicker(
-                              context: context,
-                              initialDate: endDate,
-                              firstDate: startDate,
-                              lastDate: DateTime(2101),
-                            );
-                            if (picked != null) {
-                              setDialogState(() {
-                                endDate = picked;
-                              });
-                            }
-                          },
-                        ),
-                      ),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: "value", child: Text("Stock Value (Current Stock)")),
+                      DropdownMenuItem(value: "inward", child: Text("Stock Inward")),
+                      DropdownMenuItem(value: "outward", child: Text("Stock Outward")),
                     ],
+                    onChanged: (val) {
+                      if (val != null) {
+                        setDialogState(() {
+                          reportType = val;
+                        });
+                      }
+                    },
                   ),
+                  if (reportType != "value") ...[
+                    const SizedBox(height: 16),
+                    Text("Select Date Range", style: TextStyle(color: textColor.withOpacity(0.7), fontSize: 12)),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextButton.icon(
+                            icon: Icon(Icons.calendar_today, color: textColor, size: 16),
+                            label: Text("${startDate.day}-${startDate.month}-${startDate.year}", style: TextStyle(color: textColor, fontSize: 13)),
+                            onPressed: () async {
+                              DateTime? picked = await showDatePicker(
+                                context: context,
+                                initialDate: startDate,
+                                firstDate: DateTime(2000),
+                                lastDate: DateTime(2101),
+                              );
+                              if (picked != null) {
+                                setDialogState(() {
+                                  startDate = picked;
+                                  if (endDate.isBefore(startDate)) {
+                                    endDate = startDate;
+                                  }
+                                });
+                              }
+                            },
+                          ),
+                        ),
+                        Text(" to ", style: TextStyle(color: textColor)),
+                        Expanded(
+                          child: TextButton.icon(
+                            icon: Icon(Icons.calendar_today, color: textColor, size: 16),
+                            label: Text("${endDate.day}-${endDate.month}-${endDate.year}", style: TextStyle(color: textColor, fontSize: 13)),
+                            onPressed: () async {
+                              DateTime? picked = await showDatePicker(
+                                context: context,
+                                initialDate: endDate,
+                                firstDate: startDate,
+                                lastDate: DateTime(2101),
+                              );
+                              if (picked != null) {
+                                setDialogState(() {
+                                  endDate = picked;
+                                });
+                              }
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
               actions: [
@@ -3656,7 +3686,19 @@ class InventoryView extends GetView<InventoryController> {
                     try {
                       final startStr = "${startDate.year}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}";
                       final endStr = "${endDate.year}-${endDate.month.toString().padLeft(2, '0')}-${endDate.day.toString().padLeft(2, '0')}";
-                      final reportUrl = "${ApiUrl.baseUrl}/inventory/report/pdf?dateStart=$startStr&dateEnd=$endStr";
+                      
+                      String reportUrl;
+                      String fileName;
+                      if (reportType == "value") {
+                        reportUrl = "${ApiUrl.baseUrl}/inventory/report/stock-value";
+                        fileName = "Stock_Value_Report_${DateTime.now().day}-${DateTime.now().month}-${DateTime.now().year}.pdf";
+                      } else if (reportType == "inward") {
+                        reportUrl = "${ApiUrl.baseUrl}/inventory/report/stock-inward?dateStart=$startStr&dateEnd=$endStr";
+                        fileName = "Stock_Inward_Report_${startStr}.pdf";
+                      } else {
+                        reportUrl = "${ApiUrl.baseUrl}/inventory/report/stock-outward?dateStart=$startStr&dateEnd=$endStr";
+                        fileName = "Stock_Outward_Report_${startStr}.pdf";
+                      }
                       
                       final response = await http.get(Uri.parse(reportUrl));
                       if (response.statusCode != 200) {
@@ -3666,7 +3708,6 @@ class InventoryView extends GetView<InventoryController> {
                       
                       Get.back(); // close loading
                       
-                      final fileName = "Inventory_Report_${startDate.day}-${startDate.month}-${startDate.year}.pdf";
                       if (kIsWeb) {
                         await saveAndDownloadPdf(pdfData, fileName);
                         AppSnacks.successSnack(message: "Report downloaded successfully");
